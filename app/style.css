@@ -13,7 +13,7 @@ body {
     align-items: center;
 }
 
-/* Split Screen Container */
+
 .app-container {
     display: flex;
     width: 95vw;
@@ -24,9 +24,9 @@ body {
     overflow: hidden;
 }
 
-/* Both Panels Shared Styles */
+
 .chat-panel, .results-panel {
-    flex: 1; /* This makes them take up exactly 50% each */
+    flex: 1; 
     display: flex;
     flex-direction: column;
     border-right: 1px solid #ddd;
@@ -39,7 +39,7 @@ body {
     text-align: center;
 }
 
-/* Chat Area Specifics */
+
 .chat-history {
     flex: 1;
     padding: 20px;
@@ -89,7 +89,7 @@ body {
     cursor: pointer;
 }
 
-/* Results Area Specifics */
+
 .flights-container {
     flex: 1;
     padding: 20px;
@@ -105,4 +105,24 @@ body {
     border: 2px dashed #ccc;
     border-radius: 8px;
     color: #777;
+}
+
+
+/* --- Mobile Responsive Layout --- */
+@media (max-width: 768px) {
+    
+    .app-container {
+        flex-direction: column;
+        height: 95vh; 
+    }
+
+  
+    .chat-panel, .results-panel {
+        border-right: none; 
+    }
+
+   
+    .chat-panel {
+        border-bottom: 2px solid #ddd; 
+    }
 }

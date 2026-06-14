@@ -1,8 +1,9 @@
 {
   "name": "trip-weave",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
-  "main": "index.js",
+  "main": "api/src/server.js",
   "scripts": {
     "dev": "nodemon api/src/server.js",
     "start": "node api/src/server.js",
@@ -15,7 +16,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/abikrithika/trip-weave/issues"
   },
@@ -23,10 +23,12 @@
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "@ai-sdk/groq": "^3.0.41",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1"
   },
   "devDependencies": {
-    "nodemo": "^1.0.0",
     "nodemon": "^3.1.14"
   }
 }

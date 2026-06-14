@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TripQuery",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "origin_airport",
+    "destination_airport",
+    "departure_date",
+    "max_price_dkk",
+    "vibe_tags",
+    "validation_error"
+  ],
+  "properties": {
+    "origin_airport": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{3}$",
+      "description": "IATA airport code, uppercase 3 letters",
+      "examples": ["CPH", "LHR"]
+    },
+    "destination_airport": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{3}$",
+      "description": "IATA airport code, uppercase 3 letters",
+      "examples": ["LIS", "NYC"]
+    },
+    "departure_date": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date in YYYY-MM-DD format",
+      "examples": ["2026-07-15"]
+    },
+    "max_price_dkk": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Maximum price in DKK",
+      "examples": [1500]
+    },
+    "vibe_tags": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32
+      },
+      "minItems": 0,
+      "description": "Array of short vibe tags, e.g., ['budget','beach']",
+      "examples": [["budget", "beach"]]
+    },
+    "validation_error": {
+      "type": ["string", "null"],
+      "description": "Optional top-level validation error message set by the extractor",
+      "examples": ["missing departure_date"]
+    }
+  }
+}

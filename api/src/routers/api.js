@@ -1,3 +1,8 @@
 import express from "express";
-const app = express.Router();
-export default app;
+import flightRoute from "./flights.js";
+
+const router = express.Router();
+
+router.use("/flights", flightRoute);
+
+export default router;

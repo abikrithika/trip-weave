@@ -1,8 +1,9 @@
 {
   "name": "trip-weave",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
-  "main": "index.js",
+  "main": "api/src/server.js",
   "scripts": {
     "dev": "nodemon api/src/server.js",
     "start": "node api/src/server.js",
@@ -29,7 +30,6 @@
     "ajv-formats": "^2.1.1"
   },
   "devDependencies": {
-    "nodemo": "^1.0.0",
     "nodemon": "^3.1.14"
   }
 }

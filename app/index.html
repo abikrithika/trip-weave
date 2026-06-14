@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight AI Assistant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="app-container">
+        
+        <!-- LEFT SIDE: AI CHAT -->
+        <section class="chat-panel">
+            <header class="panel-header">
+                <h2>Travel Assistant</h2>
+            </header>
+            <div class="chat-history">
+                <!-- Chat bubbles will go here -->
+                <div class="message ai-message">Hi! Where would you like to fly today?</div>
+                <div class="message user-message">I need a flight to London next week.</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" placeholder="Type your message..." id="userInput">
+                <button id="sendBtn">Send</button>
+            </div>
+        </section>
+
+        <!-- RIGHT SIDE: FLIGHT RESULTS -->
+        <section class="results-panel">
+            <header class="panel-header">
+                <h2>Flight Offers</h2>
+            </header>
+            <div class="flights-container">
+                <!-- Duffel API results will render here -->
+                <div class="flight-card-skeleton">
+                    <p>✈️ Waiting for search...</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

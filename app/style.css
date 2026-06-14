@@ -1,0 +1,128 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #f4f7f6;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+.app-container {
+    display: flex;
+    width: 95vw;
+    height: 90vh;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+
+.chat-panel, .results-panel {
+    flex: 1; 
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #ddd;
+}
+
+.panel-header {
+    padding: 20px;
+    background-color: #004aad;
+    color: white;
+    text-align: center;
+}
+
+
+.chat-history {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.message {
+    padding: 12px 18px;
+    border-radius: 20px;
+    max-width: 80%;
+}
+
+.ai-message {
+    background-color: #e9ecef;
+    align-self: flex-start;
+}
+
+.user-message {
+    background-color: #004aad;
+    color: white;
+    align-self: flex-end;
+}
+
+.chat-input-area {
+    display: flex;
+    padding: 20px;
+    border-top: 1px solid #ddd;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin-right: 10px;
+}
+
+.chat-input-area button {
+    padding: 12px 24px;
+    background-color: #004aad;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+
+.flights-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: #fafbfc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.flight-card-skeleton {
+    padding: 40px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    color: #777;
+}
+
+
+/* --- Mobile Responsive Layout --- */
+@media (max-width: 768px) {
+    
+    .app-container {
+        flex-direction: column;
+        height: 95vh; 
+    }
+
+  
+    .chat-panel, .results-panel {
+        border-right: none; 
+    }
+
+   
+    .chat-panel {
+        border-bottom: 2px solid #ddd; 
+    }
+}

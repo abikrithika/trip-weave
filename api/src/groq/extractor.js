@@ -5,6 +5,7 @@ import { createGroq } from "@ai-sdk/groq";
 import SYSTEM_PROMPT from "./systemPrompt.js";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
+import { verifyTripQuery } from "./verifier.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -91,18 +92,24 @@ async function extractTripQuery(userText, opts = {}) {
     return result;
   }
 
-  // Validate against schema
-  const valid = validate(parsed);
+  // Apply defensive verification to fix malformed fields
+  const verified = verifyTripQuery(parsed);
+
+  // Validate verified data against schema
+  const valid = validate(verified);
   if (!valid) {
     result.errors.push(
       ...(validate.errors || []).map((e) => `${e.instancePath} ${e.message}`),
     );
-    result.parsed = parsed;
+    result.parsed = verified;
+    if (verified.validation_error) {
+      result.errors.push(verified.validation_error);
+    }
     return result;
   }
 
   result.ok = true;
-  result.parsed = parsed;
+  result.parsed = verified;
   return result;
 }
 

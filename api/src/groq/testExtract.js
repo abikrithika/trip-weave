@@ -4,7 +4,7 @@ import { extractTripQuery } from "./extractor.js";
 dotenv.config();
 
 const input =
-  "Looking for cheap flights from Denmark to Finland on 2026-07-15. Vibe: cold, cozyness, city life.";
+  "Denmark to Spain, 15th to 30th July, 3000 DKK, beach vibes only, no parties, prefer direct flights";
 
 try {
   const res = await extractTripQuery(input, {

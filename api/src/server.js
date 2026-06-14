@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { extractTripQuery } from "./groq/extractor.js";
+import { executeTripExtraction } from "./groq/executor.js";
 
 dotenv.config();
 
@@ -17,15 +17,21 @@ app.get("/", (req, res) => {
 
 app.post("/api/extract-trip", async (req, res) => {
   const { text } = req.body;
-  if (!text) {
-    return res.status(400).json({ ok: false, errors: ["Missing user text"] });
-  }
 
   try {
-    const result = await extractTripQuery(text);
-    res.json(result);
+    const result = await executeTripExtraction(text);
+
+    // Send appropriate status code based on result
+    const statusCode = result.ok ? 200 : 400;
+    res.status(statusCode).json(result);
   } catch (error) {
-    res.status(500).json({ ok: false, errors: [error.message] });
+    res.status(500).json({
+      ok: false,
+      parsed: null,
+      errors: [error instanceof Error ? error.message : String(error)],
+      rawInput: text,
+      timestamp: new Date().toISOString(),
+    });
   }
 });
 

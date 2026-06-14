@@ -19,6 +19,8 @@
   },
   "homepage": "https://github.com/abikrithika/trip-weave#readme",
   "dependencies": {
+    "@ai-sdk/groq": "^3.0.41",
+    "ai": "^6.0.205",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"

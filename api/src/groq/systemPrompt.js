@@ -22,4 +22,4 @@ Example (follow structure only, do not copy text around it):
 }
 `;
 
-module.exports = SYSTEM_PROMPT;
+export default SYSTEM_PROMPT;

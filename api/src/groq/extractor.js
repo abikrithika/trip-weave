@@ -1,9 +1,13 @@
-const fs = require("fs");
-const path = require("path");
-const { createGroq } = require("@ai-sdk/groq");
-const SYSTEM_PROMPT = require("./systemPrompt");
-const Ajv = require("ajv");
-const addFormats = require("ajv-formats");
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { createGroq } from "@ai-sdk/groq";
+import SYSTEM_PROMPT from "./systemPrompt.js";
+import Ajv from "ajv";
+import addFormats from "ajv-formats";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const schemaPath = path.join(__dirname, "schema.json");
 const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
@@ -80,7 +84,6 @@ async function extractTripQuery(userText, opts = {}) {
     ok: false,
     parsed: null,
     errors: [],
-    raw: res,
   };
 
   if (!parsed) {
@@ -103,4 +106,4 @@ async function extractTripQuery(userText, opts = {}) {
   return result;
 }
 
-module.exports = { extractTripQuery };
+export { extractTripQuery };

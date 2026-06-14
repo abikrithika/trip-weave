@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         
         setTimeout(() => {
-            appendMessage("I am checking the Duffel system for those flights right now...", "ai");
+            appendMessage("Let me search TripWeave for the best flights for you right now...", "ai");
         }, 1000);
     };
 

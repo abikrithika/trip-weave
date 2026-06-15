@@ -1,7 +1,7 @@
 {
   "data": {
     "offer_request": {
-      "id": "or_mock_123",
+      "id": "mock_data_1",
       "status": "completed"
     },
     "offers": [

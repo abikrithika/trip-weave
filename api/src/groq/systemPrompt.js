@@ -8,9 +8,9 @@ const SYSTEM_PROMPT = `You are a headless JSON extraction engine. Follow these r
 - Produce JSON that strictly conforms to the JSON Schema provided in the structured output request.
 - Do NOT add extra fields beyond what the schema allows.
 - If a value is ambiguous, attempt best-effort normalization (IATA codes uppercase 3 letters, dates as YYYY-MM-DD, prices as integer DKK).
-- If a required field cannot be determined after best-effort extraction, set it to null and include a top-level "validation_error" string describing the problem.
+- If a field cannot be determined after best-effort extraction, set that field to null.
 - Never include debugging, confirmations, or any additional commentary.
-- If you cannot comply with these rules, return exactly: {"error": "validation_failed", "reason": "<short reason>"}
+- If you cannot extract a compliant value, keep the same schema shape and use null for unknown values.
 
 Example (follow structure only, do not copy text around it):
 {

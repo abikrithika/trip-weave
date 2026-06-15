@@ -31,6 +31,18 @@ Run the test script:
 node api/src/groq/testExtract.js
 ```
 
+Or call the backend route:
+
+```bash
+POST /api/groq/extract
+```
+
+```json
+{
+  "prompt": "Find cheap flights from Copenhagen to Helsinki on 2026-07-15"
+}
+```
+
 ### Expected Output (Success)
 
 ```json
@@ -41,8 +53,7 @@ node api/src/groq/testExtract.js
     "destination_airport": "LHR",
     "departure_date": "2026-07-15",
     "max_price_dkk": 1200,
-    "vibe_tags": ["beach", "chill"],
-    "validation_error": null
+    "vibe_tags": ["beach", "chill"]
   },
   "errors": []
 }

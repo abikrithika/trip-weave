@@ -37,6 +37,93 @@ function safeParseJsonMaybe(text) {
   }
 }
 
+function normalizeIataCode(value) {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") return value;
+  return value.trim().toUpperCase();
+}
+
+function normalizeMaxPriceDkk(value) {
+  if (value == null || value === "") return null;
+  if (Number.isInteger(value)) return value;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+  if (typeof value !== "string") return value;
+
+  const cleaned = value.trim().replace(/[^\d.,]/g, "");
+  if (!cleaned) return null;
+
+  const normalized = cleaned
+    .replace(/\.(?=\d{3}(\D|$))/g, "")
+    .replace(/,(?=\d{3}(\D|$))/g, "")
+    .replace(",", ".");
+  const parsed = Number(normalized);
+
+  return Number.isFinite(parsed) ? Math.round(parsed) : value;
+}
+
+function normalizeVibeTags(value) {
+  if (value == null || value === "") return [];
+
+  const tags = Array.isArray(value)
+    ? value
+    : String(value).split(/[,\n]/);
+
+  return tags
+    .map((tag) => (typeof tag === "string" ? tag.trim() : String(tag).trim()))
+    .filter(Boolean);
+}
+
+function normalizeTripQuery(raw) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+
+  return {
+    origin_airport: normalizeIataCode(source.origin_airport),
+    destination_airport: normalizeIataCode(source.destination_airport),
+    departure_date:
+      source.departure_date == null || source.departure_date === ""
+        ? null
+        : source.departure_date,
+    max_price_dkk: normalizeMaxPriceDkk(source.max_price_dkk),
+    vibe_tags: normalizeVibeTags(source.vibe_tags),
+  };
+}
+
+function isRealDateString(value) {
+  if (value == null) return true;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function verifyTripQuery(query) {
+  const errors = [];
+
+  if (!query.origin_airport) {
+    errors.push("missing_origin_airport");
+  }
+  if (!query.destination_airport) {
+    errors.push("missing_destination_airport");
+  }
+  if (!query.departure_date) {
+    errors.push("missing_departure_date");
+  } else if (!isRealDateString(query.departure_date)) {
+    errors.push("invalid_departure_date");
+  }
+
+  return errors;
+}
+
 async function extractTripQuery(userText, opts = {}) {
   const apiKey = process.env.GROQ_API_KEY;
   const groq = createGroq({ apiKey });
@@ -48,11 +135,18 @@ async function extractTripQuery(userText, opts = {}) {
     { role: "user", content: [{ type: "text", text: userText }] },
   ];
 
-  const responseFormat = { type: "json", schema };
+  // AI SDK maps this to Groq/OpenAI Structured Outputs:
+  // response_format: { type: "json_schema", json_schema: { ... } }
+  const structuredOutputFormat = {
+    type: "json",
+    name: "trip_query_extraction",
+    description: "Extract a flight search query from natural language.",
+    schema,
+  };
 
   const res = await model.doGenerate({
     prompt,
-    responseFormat,
+    responseFormat: structuredOutputFormat,
     maxOutputTokens: 512,
   });
 
@@ -91,6 +185,8 @@ async function extractTripQuery(userText, opts = {}) {
     return result;
   }
 
+  parsed = normalizeTripQuery(parsed);
+
   // Validate against schema
   const valid = validate(parsed);
   if (!valid) {
@@ -101,9 +197,16 @@ async function extractTripQuery(userText, opts = {}) {
     return result;
   }
 
+  const verificationErrors = verifyTripQuery(parsed);
+  if (verificationErrors.length > 0) {
+    result.errors.push(...verificationErrors);
+    result.parsed = parsed;
+    return result;
+  }
+
   result.ok = true;
   result.parsed = parsed;
   return result;
 }
 
-export { extractTripQuery };
+export { extractTripQuery, normalizeTripQuery, isRealDateString, verifyTripQuery };

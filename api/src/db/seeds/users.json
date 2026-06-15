@@ -1,0 +1,17 @@
+[
+    {
+        "email": "alice@tripweave.dev",
+        "passwordHash": "seed_hash_alice",
+        "preferredCurrency": "DKK"
+    },
+    {
+        "email": "marcus@tripweave.dev",
+        "passwordHash": "seed_hash_marcus",
+        "preferredCurrency": "EUR"
+    },
+    {
+        "email": "sana@tripweave.dev",
+        "passwordHash": "seed_hash_sana",
+        "preferredCurrency": "USD"
+    }
+]

@@ -7,7 +7,6 @@
   Example:
 ```json
   {
-  "data": {
   "slices": [
   {
   "origin": "DEL",
@@ -30,7 +29,6 @@
   ],
   "cabin_class": "economy"
   }
-  }
 ```
 - Click Send
 - Check the output
@@ -41,7 +39,7 @@
 - Example:
 ```json
 	{
-  "data": {
+
     "slices": [
       {
         "origin": "DOH",
@@ -60,7 +58,7 @@
       }
     ],
     "cabin_class": "economy"
-  }
+  
 }
 ```
 - Click Send 

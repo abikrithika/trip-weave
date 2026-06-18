@@ -2,12 +2,11 @@
 
 # How to test this endpoint using POSTMAN
 
-- POST http://localhost:5000/api/flights/search
+- POST http://localhost:5050/api/flights/search
 - test data in body
   Example:
 ```json
   {
-  "data": {
   "slices": [
   {
   "origin": "DEL",
@@ -30,18 +29,17 @@
   ],
   "cabin_class": "economy"
   }
-  }
 ```
 - Click Send
 - Check the output
 
 # How to test with mock-flights data
-- POST http://localhost:5000/api/flights/search
+- POST http://localhost:5050/api/flights/search
 - test data in body
 - Example:
 ```json
 	{
-  "data": {
+
     "slices": [
       {
         "origin": "DOH",
@@ -60,7 +58,7 @@
       }
     ],
     "cabin_class": "economy"
-  }
+  
 }
 ```
 - Click Send 

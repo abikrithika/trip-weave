@@ -21,11 +21,24 @@ model User {
   id                BigInt         @id @default(autoincrement())
   email             String         @unique
   passwordHash      String         @map("password_hash")
-  preferredCurrency String         @default("DKK") @map("preferred_currency")
+  currencyId        Int?           @map("currency_id")
+  currency          Currency?      @relation(fields: [currencyId], references: [id], onDelete: SetNull)
   conversations     Conversation[]
   savedOffers       SavedOffer[]
 
+  @@index([currencyId])
   @@map("users")
+}
+
+model Currency {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique @db.VarChar(3)
+  name        String
+  symbol      String?
+  users       User[]
+  savedOffers SavedOffer[]
+
+  @@map("currencies")
 }
 
 model Conversation {
@@ -58,10 +71,13 @@ model SavedOffer {
   flightNumber  String   @map("flight_number")
   origin        String
   destination   String
-  priceDkk      Decimal  @map("price_dkk") @db.Decimal(10, 2)
+  price         Decimal  @map("price") @db.Decimal(10, 2)
+  currencyId    Int?     @map("currency_id")
+  currency   Currency? @relation(fields: [currencyId], references: [id], onDelete: SetNull)
   departureTime DateTime @map("departure_time") @db.Timestamptz(6)
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([currencyId])
   @@index([userId])
   @@map("saved_offers")
 }

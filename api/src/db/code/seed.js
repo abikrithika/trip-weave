@@ -8,18 +8,48 @@ async function loadJsonSeed(fileName) {
     return JSON.parse(raw);
 }
 
+export async function seedCurrencies() {
+    const currencySeeds = await loadJsonSeed("currencies.json");
+
+    const results = [];
+
+    for (const currency of currencySeeds) {
+        const record = await prisma.currency.upsert({
+            where: { code: currency.code },
+            update: {
+                name: currency.name,
+                symbol: currency.symbol,
+            },
+            create: currency,
+        });
+
+        results.push(record);
+    }
+
+    return results;
+}
+
 export async function seedUsers() {
     const userSeeds = await loadJsonSeed("users.json");
+    const currencies = await prisma.currency.findMany();
+    const currencyByCode = new Map(currencies.map((currency) => [currency.code, currency.id]));
     const results = [];
 
     for (const user of userSeeds) {
+        const currencyCode = user.currencyCode || "DKK";
+        const currencyId = currencyByCode.get(currencyCode) || null;
+
         const record = await prisma.user.upsert({
             where: { email: user.email },
             update: {
                 passwordHash: user.passwordHash,
-                preferredCurrency: user.preferredCurrency,
+                currencyId,
             },
-            create: user,
+            create: {
+                email: user.email,
+                passwordHash: user.passwordHash,
+                currencyId,
+            },
         });
 
         results.push(record);
@@ -29,6 +59,10 @@ export async function seedUsers() {
 }
 
 const seedTasks = [
+    {
+        name: "currencies",
+        run: seedCurrencies,
+    },
     {
         name: "users",
         run: seedUsers,

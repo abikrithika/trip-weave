@@ -44,3 +44,56 @@ export async function signUp(req, res, next) {
     next(error);
   }
 }
+export async function logIn(req, res, next) {
+  try {
+    const loginValidation = loginSchema.safeParse(req.body);
+    if (!loginValidation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: loginValidation.error.flatten().fieldErrors,
+      });
+    }
+    const { email, password } = loginValidation.data;
+    const user = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+    const token = jwt.sign(
+      {
+        userId: user.id.toString(),
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1d",
+      },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      //   userId: user.id.toString(),
+      //   user: {
+      //     email: user.email,
+      //   },
+    });
+  } catch (error) {
+    next(error);
+  }
+}

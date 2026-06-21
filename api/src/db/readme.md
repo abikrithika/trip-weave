@@ -11,6 +11,8 @@ This folder contains the PostgreSQL database layer for the application.
 
 ## ERD Mapping
 
+- `currencies` 1-to-many `users`
+- `currencies` 1-to-many `saved_offers`
 - `users` 1-to-many `conversations`
 - `conversations` 1-to-many `messages`
 - `users` 1-to-many `saved_offers`
@@ -19,11 +21,18 @@ This folder contains the PostgreSQL database layer for the application.
 
 ```mermaid
 erDiagram
+	CURRENCIES {
+		int id PK
+		varchar code
+		varchar name
+		varchar symbol
+	}
+
 	USERS {
 		bigint id PK
 		varchar email
 		varchar password_hash
-		varchar preferred_currency
+		int currency_id FK
 	}
 
 	CONVERSATIONS {
@@ -47,10 +56,13 @@ erDiagram
 		varchar flight_number
 		varchar origin
 		varchar destination
-		decimal price_dkk
+		decimal price
+		int currency_id FK
 		timestamptz departure_time
 	}
 
+	CURRENCIES ||--o{ USERS : defaults
+	CURRENCIES ||--o{ SAVED_OFFERS : prices
 	USERS ||--o{ CONVERSATIONS : has
 	CONVERSATIONS ||--o{ MESSAGES : contains
 	USERS ||--o{ SAVED_OFFERS : saves

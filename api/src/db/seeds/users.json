@@ -1,17 +1,17 @@
 [
     {
         "email": "alice@tripweave.dev",
-        "passwordHash": "seed_hash_alice",
+        "passwordHash": "passalice",
         "currencyCode": "DKK"
     },
     {
         "email": "marcus@tripweave.dev",
-        "passwordHash": "seed_hash_marcus",
+        "passwordHash": "passmarcus",
         "currencyCode": "EUR"
     },
     {
         "email": "sana@tripweave.dev",
-        "passwordHash": "seed_hash_sana",
+        "passwordHash": "passsana",
         "currencyCode": "USD"
     }
 ]

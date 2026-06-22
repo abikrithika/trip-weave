@@ -4,13 +4,25 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "trip_type",
     "origin_airport",
     "destination_airport",
     "departure_date",
+    "return_date",
+    "passengers",
+    "cabin_class",
+    "currency",
     "max_price_dkk",
-    "vibe_tags"
+    "vibe_tags",
+    "filters"
   ],
   "properties": {
+    "trip_type": {
+      "type": ["string", "null"],
+      "enum": ["one_way", "return", null],
+      "description": "Whether the user wants a one-way or return trip. Use return when a return date is provided.",
+      "examples": ["one_way", "return"]
+    },
     "origin_airport": {
       "type": ["string", "null"],
       "pattern": "^[A-Z]{3}$",
@@ -29,6 +41,31 @@
       "description": "Date in YYYY-MM-DD format",
       "examples": ["2026-07-15"]
     },
+    "return_date": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Return date in YYYY-MM-DD format. Null for one-way trips.",
+      "examples": ["2026-07-22"]
+    },
+    "passengers": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 9,
+      "description": "Number of passengers. Use 1 when the user does not specify.",
+      "examples": [1, 2]
+    },
+    "cabin_class": {
+      "type": ["string", "null"],
+      "enum": ["economy", "premium_economy", "business", "first", null],
+      "description": "Requested cabin class normalized for flight search.",
+      "examples": ["economy", "business"]
+    },
+    "currency": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{3}$",
+      "description": "Preferred currency as an ISO 4217 code. Use DKK when the user does not specify.",
+      "examples": ["DKK", "EUR", "USD"]
+    },
     "max_price_dkk": {
       "type": ["integer", "null"],
       "minimum": 0,
@@ -45,6 +82,40 @@
       "minItems": 0,
       "description": "Array of short vibe tags, e.g., ['budget','beach']",
       "examples": [["budget", "beach"]]
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "direct_only",
+        "preferred_airlines",
+        "baggage_required",
+        "departure_time"
+      ],
+      "properties": {
+        "direct_only": {
+          "type": ["boolean", "null"],
+          "description": "True when the user asks for direct/non-stop flights only."
+        },
+        "preferred_airlines": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32
+          },
+          "description": "Airline names or IATA codes requested by the user."
+        },
+        "baggage_required": {
+          "type": ["boolean", "null"],
+          "description": "True when the user asks for baggage to be included."
+        },
+        "departure_time": {
+          "type": ["string", "null"],
+          "enum": ["morning", "afternoon", "evening", "night", null],
+          "description": "Preferred departure time window when mentioned."
+        }
+      }
     }
   }
 }

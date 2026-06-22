@@ -170,7 +170,9 @@ async function testLiveFlightSearch(userPrompt) {
     let promptToSend = formattedUserPrompt;
     const lowerPrompt = formattedUserPrompt.toLowerCase();
     
-    const isNewSearch = lowerPrompt.includes("flight from") || (lowerPrompt.includes("from ") && lowerPrompt.includes(" to "));
+    const isNewSearch = lowerPrompt.includes("flight") || 
+                    lowerPrompt.includes("-") || 
+                    (lowerPrompt.includes(" to ") && !lowerPrompt.includes("like to") && !lowerPrompt.includes("want to") && !lowerPrompt.includes("travel to") && !lowerPrompt.includes("need to"));
 
     if (flightContext && !isNewSearch) {
         promptToSend = `The user previously asked for: "${flightContext}". They are now replying with: "${formattedUserPrompt}". If this reply contains a date, extract the origin_airport, destination_airport, and departure_date into the required JSON format. Assume the year is 2026 if not specified.`;

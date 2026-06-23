@@ -28,7 +28,10 @@ export const searchFlights = async (payload) => {
   } catch (error) {
     // If something went wrong, optionally fall back to mock data when enabled
     if (USE_MOCK) {
-      console.warn("Duffel request failed; falling back to mock data:", error.message || error);
+      console.warn(
+        "Duffel request failed; falling back to mock data:",
+        error.message || error,
+      );
       return mockFlights;
     }
     throw error;

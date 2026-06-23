@@ -1,5 +1,6 @@
 import { extractTripQuery } from "../groq/extractor.js";
 import { searchFlights } from "../services/duffel.js";
+import { detectFallbackOrigin } from "../utils/originFallback.js";
 
 function buildDuffelSearchPayload(tripQuery) {
   const slices = [
@@ -38,21 +39,49 @@ export const aiFlightSearchController = async (req, res, next) => {
 
   try {
     const extracted = await extractTripQuery(userText.trim());
-    console.log('AI extraction result:', { ok: extracted.ok, errors: extracted.errors, parsed: extracted.parsed });
+    console.log("AI extraction result:", {
+      ok: extracted.ok,
+      errors: extracted.errors,
+      parsed: extracted.parsed,
+    });
 
     if (!extracted.ok) {
-      return res.status(422).json({
-        success: false,
-        message: "Could not extract a complete flight search query.",
-        query: extracted.parsed,
-        errors: extracted.errors,
-      });
+      const errs = extracted.errors || [];
+      // If origin is missing but destination/date was extracted, apply fallback and continue.
+      if (
+        extracted.parsed &&
+        !extracted.parsed.origin_airport &&
+        extracted.parsed.destination_airport
+      ) {
+        const fallback = await detectFallbackOrigin(req);
+        extracted.parsed.origin_airport = fallback;
+        console.log(
+          "Applied fallback origin (heuristic) and continuing:",
+          fallback,
+          "errors:",
+          errs,
+        );
+      } else {
+        return res.status(422).json({
+          success: false,
+          message: "Could not extract a complete flight search query.",
+          query: extracted.parsed,
+          errors: extracted.errors,
+        });
+      }
     }
 
     const duffelPayload = buildDuffelSearchPayload(extracted.parsed);
-    console.log('Calling Duffel with payload:', JSON.stringify(duffelPayload));
+    console.log("Calling Duffel with payload:", JSON.stringify(duffelPayload));
     const flights = await searchFlights(duffelPayload);
-    console.log('Duffel response received: (truncated)', typeof flights === 'object' ? (Array.isArray(flights.data?.data?.offers) ? `${flights.data.data.offers.length} offers` : 'object') : typeof flights);
+    console.log(
+      "Duffel response received: (truncated)",
+      typeof flights === "object"
+        ? Array.isArray(flights.data?.data?.offers)
+          ? `${flights.data.data.offers.length} offers`
+          : "object"
+        : typeof flights,
+    );
 
     return res.status(200).json({
       success: true,

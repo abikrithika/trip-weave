@@ -14,7 +14,15 @@ const app = express();
 
 app.use(express.json());
 
+// Serve static files from the app directory
+app.use(express.static(path.resolve(__dirname, "../../app")));
+
 app.use("/api", apiRoutes);
+
+// Serve index.html for root path
+app.get("/", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../../app/index.html"));
+});
 
 const PORT = process.env.PORT || 5050;
 

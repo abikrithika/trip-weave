@@ -383,11 +383,21 @@ function renderFlightsToScreen(flightsArray) {
 
     const sliceSummaries = slices.map((s) => {
       const origin =
-        s.origin?.iata_code || s.origin || (s.segments && s.segments[0]?.origin?.iata_code) || "--";
+        s.origin?.iata_code ||
+        s.origin ||
+        (s.segments && s.segments[0]?.origin?.iata_code) ||
+        "--";
       const destination =
-        s.destination?.iata_code || s.destination || (s.segments && s.segments[0]?.destination?.iata_code) || "--";
-      const dep = s.departure_time || (s.segments && s.segments[0]?.departure_time) || null;
-      const arr = s.arrival_time || (s.segments && s.segments[0]?.arrival_time) || null;
+        s.destination?.iata_code ||
+        s.destination ||
+        (s.segments && s.segments[0]?.destination?.iata_code) ||
+        "--";
+      const dep =
+        s.departure_time ||
+        (s.segments && s.segments[0]?.departure_time) ||
+        null;
+      const arr =
+        s.arrival_time || (s.segments && s.segments[0]?.arrival_time) || null;
       const stops = s.segments ? Math.max(0, s.segments.length - 1) : 0;
       let durationMin = null;
       if (dep && arr) {
@@ -407,14 +417,22 @@ function renderFlightsToScreen(flightsArray) {
         )?.name) ||
       "Unknown Airline";
 
-    const depTime = sliceSummaries[0]?.dep ? new Date(sliceSummaries[0].dep) : null;
-    const totalDuration = sliceSummaries.reduce((acc, s) => acc + (s.durationMin || 0), 0) || null;
-    const totalStops = sliceSummaries.reduce((acc, s) => acc + (s.stops || 0), 0);
+    const depTime = sliceSummaries[0]?.dep
+      ? new Date(sliceSummaries[0].dep)
+      : null;
+    const totalDuration =
+      sliceSummaries.reduce((acc, s) => acc + (s.durationMin || 0), 0) || null;
+    const totalStops = sliceSummaries.reduce(
+      (acc, s) => acc + (s.stops || 0),
+      0,
+    );
 
     const baggageIncluded = Boolean(
-      flight.includes?.some?.((inc) => /baggage|bag/i.test(inc.description || inc.type || "")) ||
-        flight.baggage_included ||
-        flight.includes_baggage,
+      flight.includes?.some?.((inc) =>
+        /baggage|bag/i.test(inc.description || inc.type || ""),
+      ) ||
+      flight.baggage_included ||
+      flight.includes_baggage,
     );
 
     return {
@@ -445,7 +463,12 @@ function renderVisibleFlights() {
         if (f.priceNum > Number(activeFilters.maxPrice)) return false;
       }
       if (activeFilters.airline && activeFilters.airline.trim() !== "") {
-        if (!f.owner.toLowerCase().includes(activeFilters.airline.trim().toLowerCase())) return false;
+        if (
+          !f.owner
+            .toLowerCase()
+            .includes(activeFilters.airline.trim().toLowerCase())
+        )
+          return false;
       }
       if (activeFilters.baggageIncluded && !f.baggageIncluded) return false;
       if (activeFilters.timeOfDay === "morning") {
@@ -472,13 +495,15 @@ function renderVisibleFlights() {
     });
 
   if (visibleFlights.length === 0) {
-    container.innerHTML = '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium">No flights match the active filters.</p></div>';
+    container.innerHTML =
+      '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium">No flights match the active filters.</p></div>';
     return;
   }
 
   visibleFlights.forEach((f) => {
     const card = document.createElement("div");
-    card.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-4";
+    card.className =
+      "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-4";
 
     let inner = `<div class="flex justify-between items-start">
             <div>

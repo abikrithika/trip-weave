@@ -28,7 +28,13 @@ npm install
 Run the test script:
 
 ```bash
-node api/src/groq/testExtract.js
+npm run test:extract
+```
+
+Run the offline normalization test:
+
+```bash
+npm run test:extract:normalize
 ```
 
 Or call the backend route:
@@ -39,7 +45,7 @@ POST /api/groq/extract
 
 ```json
 {
-  "prompt": "Find cheap flights from Copenhagen to Helsinki on 2026-07-15"
+  "prompt": "Find direct return flights from Copenhagen to Barcelona for 2 passengers from 2026-07-15 to 2026-07-22 under 2500 DKK with baggage included."
 }
 ```
 
@@ -49,11 +55,22 @@ POST /api/groq/extract
 {
   "ok": true,
   "parsed": {
+    "trip_type": "return",
     "origin_airport": "CPH",
-    "destination_airport": "LHR",
+    "destination_airport": "BCN",
     "departure_date": "2026-07-15",
-    "max_price_dkk": 1200,
-    "vibe_tags": ["beach", "chill"]
+    "return_date": "2026-07-22",
+    "passengers": 2,
+    "cabin_class": "economy",
+    "currency": "DKK",
+    "max_price_dkk": 2500,
+    "vibe_tags": [],
+    "filters": {
+      "direct_only": true,
+      "preferred_airlines": [],
+      "baggage_required": true,
+      "departure_time": null
+    }
   },
   "errors": []
 }
@@ -84,3 +101,4 @@ POST /api/groq/extract
 - `systemPrompt.js` - System prompt for Groq
 - `schema.json` - JSON Schema for validation
 - `testExtract.js` - Test script
+- `testNormalize.js` - Offline normalization test script

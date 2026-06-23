@@ -43,6 +43,53 @@ function normalizeIataCode(value) {
   return value.trim().toUpperCase();
 }
 
+function normalizeCurrency(value) {
+  if (value == null || value === "") return "DKK";
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : value;
+}
+
+function normalizeTripType(value, returnDate) {
+  if (returnDate) return "return";
+  if (typeof value !== "string" || value.trim() === "") return "one_way";
+
+  const normalized = value.trim().toLowerCase().replace(/[-\s]/g, "_");
+  if (["return", "round_trip", "roundtrip"].includes(normalized))
+    return "return";
+  if (["one_way", "oneway", "single"].includes(normalized)) return "one_way";
+
+  return value;
+}
+
+function normalizeCabinClass(value) {
+  if (value == null || value === "") return "economy";
+  if (typeof value !== "string") return value;
+
+  const normalized = value.trim().toLowerCase().replace(/[-\s]/g, "_");
+  const aliases = {
+    premium: "premium_economy",
+    premium_economy: "premium_economy",
+    economy: "economy",
+    business: "business",
+    first: "first",
+    first_class: "first",
+  };
+
+  return aliases[normalized] || value;
+}
+
+function normalizePassengers(value) {
+  if (value == null || value === "") return 1;
+  if (Number.isInteger(value)) return value;
+  if (typeof value === "number" && Number.isFinite(value))
+    return Math.round(value);
+  if (typeof value !== "string") return value;
+
+  const parsed = Number.parseInt(value.replace(/[^\d]/g, ""), 10);
+  return Number.isFinite(parsed) ? parsed : value;
+}
+
 function normalizeMaxPriceDkk(value) {
   if (value == null || value === "") return null;
   if (Number.isInteger(value)) return value;
@@ -73,11 +120,62 @@ function normalizeVibeTags(value) {
     .filter(Boolean);
 }
 
+function normalizeBoolean(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return value;
+
+  const normalized = value.trim().toLowerCase();
+  if (
+    ["true", "yes", "y", "only", "direct", "nonstop", "non-stop"].includes(
+      normalized,
+    )
+  ) {
+    return true;
+  }
+  if (["false", "no", "n"].includes(normalized)) {
+    return false;
+  }
+  return value;
+}
+
+function normalizePreferredAirlines(value) {
+  if (value == null || value === "") return [];
+  const airlines = Array.isArray(value) ? value : String(value).split(/[,\n]/);
+
+  return airlines.map((airline) => String(airline).trim()).filter(Boolean);
+}
+
+function normalizeDepartureTime(value) {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") return value;
+
+  const normalized = value.trim().toLowerCase();
+  if (["morning", "afternoon", "evening", "night"].includes(normalized)) {
+    return normalized;
+  }
+
+  return value;
+}
+
+function normalizeFilters(value) {
+  const source =
+    value && typeof value === "object" && !Array.isArray(value) ? value : {};
+
+  return {
+    direct_only: normalizeBoolean(source.direct_only),
+    preferred_airlines: normalizePreferredAirlines(source.preferred_airlines),
+    baggage_required: normalizeBoolean(source.baggage_required),
+    departure_time: normalizeDepartureTime(source.departure_time),
+  };
+}
+
 function normalizeTripQuery(raw) {
   const source =
     raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
 
   return {
+    trip_type: normalizeTripType(source.trip_type, returnDate),
     origin_airport: normalizeIataCode(source.origin_airport),
     destination_airport: normalizeIataCode(source.destination_airport),
     departure_date:
@@ -90,6 +188,7 @@ function normalizeTripQuery(raw) {
         : source.return_date,
     max_price_dkk: normalizeMaxPriceDkk(source.max_price_dkk),
     vibe_tags: normalizeVibeTags(source.vibe_tags),
+    filters: normalizeFilters(source.filters),
   };
 }
 
@@ -122,6 +221,19 @@ function verifyTripQuery(query) {
     errors.push("missing_departure_date");
   } else if (!isRealDateString(query.departure_date)) {
     errors.push("invalid_departure_date");
+  }
+  if (query.return_date && !isRealDateString(query.return_date)) {
+    errors.push("invalid_return_date");
+  }
+  if (query.trip_type === "return" && !query.return_date) {
+    errors.push("missing_return_date");
+  }
+  if (
+    query.departure_date &&
+    query.return_date &&
+    query.return_date < query.departure_date
+  ) {
+    errors.push("return_date_before_departure_date");
   }
 
   if (query.return_date) {
@@ -160,11 +272,22 @@ async function extractTripQuery(userText, opts = {}) {
     schema,
   };
 
-  const res = await model.doGenerate({
-    prompt,
-    responseFormat: structuredOutputFormat,
-    maxOutputTokens: 512,
-  });
+  let res;
+  try {
+    res = await model.doGenerate({
+      prompt,
+      responseFormat: structuredOutputFormat,
+      // increase token budget so the model has more room to emit valid JSON
+      maxOutputTokens: 1024,
+    });
+  } catch (err) {
+    console.error("Groq generation failed:", err?.message || err);
+    return {
+      ok: false,
+      parsed: null,
+      errors: ["failed_generation", err?.message || String(err)],
+    };
+  }
 
   // Try to parse JSON from the returned content
   let parsed = null;

@@ -13,7 +13,10 @@ export async function signUp(req, res, next) {
         errors: signUpValidation.error.flatten().fieldErrors,
       });
     }
-    const { email, password } = signUpValidation.data;
+    
+    // 1. EXTRACT NAME HERE
+    const { name, email, password } = signUpValidation.data;
+    
     const existingUser = await prisma.user.findFirst({
       where: {
         email: {
@@ -28,9 +31,13 @@ export async function signUp(req, res, next) {
         message: "Email already exists",
       });
     }
+    
     const passwordHash = await bcrypt.hash(password, 10);
+    
+    // 2. SAVE NAME TO DATABASE HERE
     await prisma.user.create({
       data: {
+        name, 
         email,
         passwordHash: passwordHash,
       },
@@ -58,6 +65,7 @@ export async function logIn(req, res, next) {
       where: {
         email,
       },
+      include: { currency: true }
     });
     if (!user) {
       return res.status(401).json({
@@ -88,6 +96,13 @@ export async function logIn(req, res, next) {
       success: true,
       message: "Login successful",
       token,
+
+      user: {
+        name: user.name,
+        email: user.email,
+        currency: user.currency ? { code: user.currency.code } : null
+      }
+      
       //   userId: user.id.toString(),
       //   user: {
       //     email: user.email,

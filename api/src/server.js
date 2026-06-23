@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import cors from "cors";
 import apiRoutes from "./routers/api.js";
 import prisma from "./db/code/prisma.js";
 
@@ -12,6 +13,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
 // Serve static files from the app directory
@@ -19,8 +21,7 @@ app.use(express.static(path.resolve(__dirname, "../../app")));
 
 app.use("/api", apiRoutes);
 
-// Serve index.html for root path
-app.get("/", (req, res) => {
+app.get("*splat", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../../app/index.html"));
 });
 
@@ -31,6 +32,7 @@ async function startServer() {
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`http://localhost:${PORT}`);
   });
 }
 

@@ -1,6 +1,7 @@
 import { pathToFileURL } from "url";
 import { readFile } from "fs/promises";
 import prisma from "./prisma.js";
+import bcrypt from "bcryptjs";
 
 async function loadJsonSeed(fileName) {
     const filePath = new URL(`../seeds/${fileName}`, import.meta.url);
@@ -42,12 +43,12 @@ export async function seedUsers() {
         const record = await prisma.user.upsert({
             where: { email: user.email },
             update: {
-                passwordHash: user.passwordHash,
+                passwordHash: bcrypt.hashSync(user.passwordHash),
                 currencyId,
             },
             create: {
                 email: user.email,
-                passwordHash: user.passwordHash,
+                passwordHash: bcrypt.hashSync(user.passwordHash),
                 currencyId,
             },
         });

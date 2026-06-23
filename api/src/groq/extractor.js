@@ -185,6 +185,13 @@ async function extractTripQuery(userText, opts = {}) {
     return result;
   }
 
+  // --- PRE-NORMALIZATION FIX ---
+  // Ensure vibe_tags is always treated as an array before validation.
+  if (parsed.vibe_tags && typeof parsed.vibe_tags === 'string') {
+     parsed.vibe_tags = [parsed.vibe_tags];
+  }
+  // -----------------------------
+  
   parsed = normalizeTripQuery(parsed);
 
   // Validate against schema

@@ -1,4 +1,4 @@
-* {
+/* {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -106,9 +106,11 @@ body {
     border-radius: 8px;
     color: #777;
 }
+*/
 
 
 /* --- Mobile Responsive Layout --- */
+/*
 @media (max-width: 768px) {
     
     .app-container {
@@ -125,4 +127,4 @@ body {
     .chat-panel {
         border-bottom: 2px solid #ddd; 
     }
-}
+}*/

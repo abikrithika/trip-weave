@@ -1,5 +1,3 @@
-// services/cache.service.js
-
 const cache = new Map();
 
 export const getCache = (key) => {

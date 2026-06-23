@@ -5,7 +5,7 @@
   "description": "",
   "main": "api/src/server.js",
   "scripts": {
-    "dev": "nodemon api/src/server.js",
+    "dev": "prisma generate --schema=./api/src/db/code/schema.prisma && nodemon api/src/server.js",
     "start": "node api/src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:generate": "prisma generate --config api/src/db/code/prisma.config.js",
@@ -14,7 +14,9 @@
     "db:migrate": "prisma migrate dev --config api/src/db/code/prisma.config.js",
     "db:seed": "prisma db seed --config api/src/db/code/prisma.config.js",
     "db:deploy": "prisma migrate deploy --config api/src/db/code/prisma.config.js",
-    "db:all": "npm run db:create && npm run db:validate && npm run db:migrate && npm run db:generate && npm run db:seed"
+    "db:all": "cd api/src/db && npm run db:create && npm run db:validate && npm run db:migrate && npm run db:generate && npm run db:seed",
+    "start:frontend": "http-server ./app",
+    "standalone": "concurrently \"npm run start:frontend\" \"npm run dev\""
   },
   "repository": {
     "type": "git",
@@ -32,12 +34,17 @@
     "@prisma/client": "^6.16.2",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.21.0"
   },
   "devDependencies": {
+    "concurrently": "^10.0.3",
+    "http-server": "^14.1.1",
     "nodemon": "^3.1.14",
     "prisma": "^6.16.2"
   }

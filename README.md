@@ -1,5 +1,7 @@
 # trip-weave
+## Project Board
 
+- Trello: https://trello.com/b/2veKRbtH/trip-weave
 ## Prerequisites
 
 Make sure you have the following installed:

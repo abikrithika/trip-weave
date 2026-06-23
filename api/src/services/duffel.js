@@ -1,7 +1,10 @@
 import mockFlights from "../data/mock-flights.json" with { type: "json" };
 import dotenv from "dotenv";
 dotenv.config();
-const USE_MOCK = true;
+// Allow toggling mock/live via environment variable DUFFEL_USE_MOCK
+const USE_MOCK = process.env.DUFFEL_USE_MOCK
+  ? String(process.env.DUFFEL_USE_MOCK).toLowerCase() === "true"
+  : false; // default to live API
 const BASE_API_URL = process.env.DUFFEL_API_URL || "https://api.duffel.com";
 export const searchFlights = async (payload) => {
   try {
@@ -23,8 +26,9 @@ export const searchFlights = async (payload) => {
     }
     return responseBody;
   } catch (error) {
-    if (error.message.includes("fetch failed") && USE_MOCK) {
-      console.log("No internet connection. Using mock data.");
+    // If something went wrong, optionally fall back to mock data when enabled
+    if (USE_MOCK) {
+      console.warn("Duffel request failed; falling back to mock data:", error.message || error);
       return mockFlights;
     }
     throw error;

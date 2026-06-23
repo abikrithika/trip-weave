@@ -38,6 +38,7 @@ export const aiFlightSearchController = async (req, res, next) => {
 
   try {
     const extracted = await extractTripQuery(userText.trim());
+    console.log('AI extraction result:', { ok: extracted.ok, errors: extracted.errors, parsed: extracted.parsed });
 
     if (!extracted.ok) {
       return res.status(422).json({
@@ -49,7 +50,9 @@ export const aiFlightSearchController = async (req, res, next) => {
     }
 
     const duffelPayload = buildDuffelSearchPayload(extracted.parsed);
+    console.log('Calling Duffel with payload:', JSON.stringify(duffelPayload));
     const flights = await searchFlights(duffelPayload);
+    console.log('Duffel response received: (truncated)', typeof flights === 'object' ? (Array.isArray(flights.data?.data?.offers) ? `${flights.data.data.offers.length} offers` : 'object') : typeof flights);
 
     return res.status(200).json({
       success: true,

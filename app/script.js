@@ -195,7 +195,7 @@ async function testLiveFlightSearch(userPrompt) {
     });
 
     const groqData = await groqResponse.json();
-
+    console.log(groqData);
     // 2. Handle missing date scenario
     // ONLY ask for a date if the AI successfully found the origin and destination first!
     if (!groqData.success) {
@@ -304,7 +304,6 @@ function renderFlightsToScreen(flightsArray) {
         f.destination === destination &&
         f.price === price,
     );
-
     const card = document.createElement("div");
 
     // card.className =
@@ -322,14 +321,20 @@ function renderFlightsToScreen(flightsArray) {
   <div class="flex items-center gap-4">
    <span class="font-bold text-blue-600">${price}</span>
 <button class="favorite-btn text-red-500 text-xl">
-  ❤️
-</button>
+    ${
+      isSaved
+        ? '<i class="fa-solid fa-heart"></i>'
+        : '<i class="fa-regular fa-heart"></i>'
+    }
+  </button>
 </div>
 `;
 
     const favBtn = card.querySelector(".favorite-btn");
     console.log(favBtn);
-    favBtn.innerHTML = isSaved ? "❤️" : "🤍";
+    // favBtn.innerHTML = isSaved
+    //   ? '<i class="fa-solid fa-heart"></i>'
+    //   : '<i class="fa-regular fa-heart"></i>';
     favBtn.addEventListener("click", () => {
       const exists = State.savedFlights.some(
         (f) =>
@@ -373,6 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const input = UI.el("userInput");
 
   function handleSend() {
+    console.log("inside handle send function");
     const prompt = input.value.trim();
 
     if (!prompt) return;

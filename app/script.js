@@ -107,23 +107,27 @@ async function submitAuthForm() {
 // ==========================================
 // Lightweight fallback parser: looks for two IATA codes and a YYYY-MM-DD or simple Month Day dates
 function parseFallbackFromPrompt(text) {
-  if (!text || typeof text !== 'string') return null;
+  if (!text || typeof text !== "string") return null;
   const upper = text.toUpperCase();
   // find standalone 3-letter codes (word boundaries) to avoid matching inside other words
   const codes = upper.match(/\b[A-Z]{3}\b/g) || [];
   // find ISO-like dates (may be multiple)
   const isoDates = text.match(/\b\d{4}-\d{2}-\d{2}\b/g) || [];
   // find simple month/day like July 20 or Jul 20 (may be multiple)
-  const monthDays = [...text.matchAll(/\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}\b/ig)];
+  const monthDays = [
+    ...text.matchAll(
+      /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}\b/gi,
+    ),
+  ];
 
   // Helper to normalize a single monthDay match into YYYY-MM-DD (assume 2026)
   function toIsoFromMonthDay(md) {
     try {
-      const parsed = new Date(md + ' 2026');
+      const parsed = new Date(md + " 2026");
       if (isNaN(parsed)) return null;
       const yyyy = parsed.getFullYear();
-      const mm = String(parsed.getMonth() + 1).padStart(2, '0');
-      const dd = String(parsed.getDate()).padStart(2, '0');
+      const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+      const dd = String(parsed.getDate()).padStart(2, "0");
       return `${yyyy}-${mm}-${dd}`;
     } catch (e) {
       return null;
@@ -142,13 +146,13 @@ function parseFallbackFromPrompt(text) {
 
   if (codes.length >= 2 && departure) {
     return {
-      trip_type: ret ? 'return' : 'one_way',
+      trip_type: ret ? "return" : "one_way",
       origin_airport: codes[0],
       destination_airport: codes[1],
       departure_date: departure,
       return_date: ret || null,
       passengers: 1,
-      cabin_class: 'economy',
+      cabin_class: "economy",
     };
   }
 
@@ -207,7 +211,7 @@ async function testLiveFlightSearch(userPrompt) {
     if (!groqData.success) {
       const fallback = parseFallbackFromPrompt(formattedUserPrompt);
       if (fallback) {
-        console.warn('Using fallback parse from user prompt:', fallback);
+        console.warn("Using fallback parse from user prompt:", fallback);
         // mimic groqData.data shape used below
         groqData.success = true;
         groqData.data = fallback;

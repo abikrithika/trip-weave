@@ -19,9 +19,9 @@ app.use(express.json());
 
 app.use("/api", apiRoutes);
 
-  // API error handlers (JSON responses)
-  app.use(apiNotFoundHandler);
-  app.use(apiErrorHandler);
+// API error handlers (JSON responses)
+app.use(apiNotFoundHandler);
+app.use(apiErrorHandler);
 
 const PORT = process.env.PORT || 5050;
 

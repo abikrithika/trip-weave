@@ -24,7 +24,10 @@ export const searchFlights = async (payload) => {
     return responseBody;
   } catch (error) {
     if (USE_MOCK) {
-      console.log("Duffel request failed. Using mock data. Error:", error.message);
+      console.log(
+        "Duffel request failed. Using mock data. Error:",
+        error.message,
+      );
       return mockFlights;
     }
     throw error;

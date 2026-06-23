@@ -55,7 +55,8 @@ function normalizeTripType(value, returnDate) {
   if (typeof value !== "string" || value.trim() === "") return "one_way";
 
   const normalized = value.trim().toLowerCase().replace(/[-\s]/g, "_");
-  if (["return", "round_trip", "roundtrip"].includes(normalized)) return "return";
+  if (["return", "round_trip", "roundtrip"].includes(normalized))
+    return "return";
   if (["one_way", "oneway", "single"].includes(normalized)) return "one_way";
 
   return value;
@@ -81,7 +82,8 @@ function normalizeCabinClass(value) {
 function normalizePassengers(value) {
   if (value == null || value === "") return 1;
   if (Number.isInteger(value)) return value;
-  if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
+  if (typeof value === "number" && Number.isFinite(value))
+    return Math.round(value);
   if (typeof value !== "string") return value;
 
   const parsed = Number.parseInt(value.replace(/[^\d]/g, ""), 10);
@@ -111,9 +113,7 @@ function normalizeMaxPriceDkk(value) {
 function normalizeVibeTags(value) {
   if (value == null || value === "") return [];
 
-  const tags = Array.isArray(value)
-    ? value
-    : String(value).split(/[,\n]/);
+  const tags = Array.isArray(value) ? value : String(value).split(/[,\n]/);
 
   return tags
     .map((tag) => (typeof tag === "string" ? tag.trim() : String(tag).trim()))
@@ -126,7 +126,11 @@ function normalizeBoolean(value) {
   if (typeof value !== "string") return value;
 
   const normalized = value.trim().toLowerCase();
-  if (["true", "yes", "y", "only", "direct", "nonstop", "non-stop"].includes(normalized)) {
+  if (
+    ["true", "yes", "y", "only", "direct", "nonstop", "non-stop"].includes(
+      normalized,
+    )
+  ) {
     return true;
   }
   if (["false", "no", "n"].includes(normalized)) {
@@ -139,9 +143,7 @@ function normalizePreferredAirlines(value) {
   if (value == null || value === "") return [];
   const airlines = Array.isArray(value) ? value : String(value).split(/[,\n]/);
 
-  return airlines
-    .map((airline) => String(airline).trim())
-    .filter(Boolean);
+  return airlines.map((airline) => String(airline).trim()).filter(Boolean);
 }
 
 function normalizeDepartureTime(value) {
@@ -157,7 +159,8 @@ function normalizeDepartureTime(value) {
 }
 
 function normalizeFilters(value) {
-  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const source =
+    value && typeof value === "object" && !Array.isArray(value) ? value : {};
 
   return {
     direct_only: normalizeBoolean(source.direct_only),
@@ -168,7 +171,8 @@ function normalizeFilters(value) {
 }
 
 function normalizeTripQuery(raw) {
-  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const source =
+    raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const returnDate =
     source.return_date == null || source.return_date === ""
       ? null
@@ -228,7 +232,11 @@ function verifyTripQuery(query) {
   if (query.trip_type === "return" && !query.return_date) {
     errors.push("missing_return_date");
   }
-  if (query.departure_date && query.return_date && query.return_date < query.departure_date) {
+  if (
+    query.departure_date &&
+    query.return_date &&
+    query.return_date < query.departure_date
+  ) {
     errors.push("return_date_before_departure_date");
   }
 
@@ -264,11 +272,11 @@ async function extractTripQuery(userText, opts = {}) {
       maxOutputTokens: 1024,
     });
   } catch (err) {
-    console.error('Groq generation failed:', err?.message || err);
+    console.error("Groq generation failed:", err?.message || err);
     return {
       ok: false,
       parsed: null,
-      errors: ['failed_generation', err?.message || String(err)],
+      errors: ["failed_generation", err?.message || String(err)],
     };
   }
 
@@ -309,11 +317,11 @@ async function extractTripQuery(userText, opts = {}) {
 
   // --- PRE-NORMALIZATION FIX ---
   // Ensure vibe_tags is always treated as an array before validation.
-  if (parsed.vibe_tags && typeof parsed.vibe_tags === 'string') {
-     parsed.vibe_tags = [parsed.vibe_tags];
+  if (parsed.vibe_tags && typeof parsed.vibe_tags === "string") {
+    parsed.vibe_tags = [parsed.vibe_tags];
   }
   // -----------------------------
-  
+
   parsed = normalizeTripQuery(parsed);
 
   // Validate against schema
@@ -338,4 +346,9 @@ async function extractTripQuery(userText, opts = {}) {
   return result;
 }
 
-export { extractTripQuery, normalizeTripQuery, isRealDateString, verifyTripQuery };
+export {
+  extractTripQuery,
+  normalizeTripQuery,
+  isRealDateString,
+  verifyTripQuery,
+};

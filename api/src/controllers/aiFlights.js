@@ -2,14 +2,25 @@ import { extractTripQuery } from "../groq/extractor.js";
 import { searchFlights } from "../services/duffel.js";
 
 function buildDuffelSearchPayload(tripQuery) {
+  const slices = [
+    {
+      origin: tripQuery.origin_airport,
+      destination: tripQuery.destination_airport,
+      departure_date: tripQuery.departure_date,
+    },
+  ];
+
+  // If a return_date is provided, add a second slice for the return leg
+  if (tripQuery.return_date) {
+    slices.push({
+      origin: tripQuery.destination_airport,
+      destination: tripQuery.origin_airport,
+      departure_date: tripQuery.return_date,
+    });
+  }
+
   return {
-    slices: [
-      {
-        origin: tripQuery.origin_airport,
-        destination: tripQuery.destination_airport,
-        departure_date: tripQuery.departure_date,
-      },
-    ],
+    slices,
     passengers: [{ type: "adult" }],
     cabin_class: "economy",
   };

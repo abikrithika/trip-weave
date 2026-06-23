@@ -66,9 +66,7 @@ function normalizeMaxPriceDkk(value) {
 function normalizeVibeTags(value) {
   if (value == null || value === "") return [];
 
-  const tags = Array.isArray(value)
-    ? value
-    : String(value).split(/[,\n]/);
+  const tags = Array.isArray(value) ? value : String(value).split(/[,\n]/);
 
   return tags
     .map((tag) => (typeof tag === "string" ? tag.trim() : String(tag).trim()))
@@ -76,7 +74,8 @@ function normalizeVibeTags(value) {
 }
 
 function normalizeTripQuery(raw) {
-  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const source =
+    raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
 
   return {
     origin_airport: normalizeIataCode(source.origin_airport),
@@ -85,6 +84,10 @@ function normalizeTripQuery(raw) {
       source.departure_date == null || source.departure_date === ""
         ? null
         : source.departure_date,
+    return_date:
+      source.return_date == null || source.return_date === ""
+        ? null
+        : source.return_date,
     max_price_dkk: normalizeMaxPriceDkk(source.max_price_dkk),
     vibe_tags: normalizeVibeTags(source.vibe_tags),
   };
@@ -119,6 +122,19 @@ function verifyTripQuery(query) {
     errors.push("missing_departure_date");
   } else if (!isRealDateString(query.departure_date)) {
     errors.push("invalid_departure_date");
+  }
+
+  if (query.return_date) {
+    if (!isRealDateString(query.return_date)) {
+      errors.push("invalid_return_date");
+    } else if (isRealDateString(query.departure_date)) {
+      // Ensure return date is not before departure date
+      const dep = new Date(query.departure_date + "T00:00:00Z");
+      const ret = new Date(query.return_date + "T00:00:00Z");
+      if (ret < dep) {
+        errors.push("return_before_departure_date");
+      }
+    }
   }
 
   return errors;
@@ -187,11 +203,11 @@ async function extractTripQuery(userText, opts = {}) {
 
   // --- PRE-NORMALIZATION FIX ---
   // Ensure vibe_tags is always treated as an array before validation.
-  if (parsed.vibe_tags && typeof parsed.vibe_tags === 'string') {
-     parsed.vibe_tags = [parsed.vibe_tags];
+  if (parsed.vibe_tags && typeof parsed.vibe_tags === "string") {
+    parsed.vibe_tags = [parsed.vibe_tags];
   }
   // -----------------------------
-  
+
   parsed = normalizeTripQuery(parsed);
 
   // Validate against schema
@@ -216,4 +232,9 @@ async function extractTripQuery(userText, opts = {}) {
   return result;
 }
 
-export { extractTripQuery, normalizeTripQuery, isRealDateString, verifyTripQuery };
+export {
+  extractTripQuery,
+  normalizeTripQuery,
+  isRealDateString,
+  verifyTripQuery,
+};

@@ -29,6 +29,12 @@
       "description": "Date in YYYY-MM-DD format",
       "examples": ["2026-07-15"]
     },
+    "return_date": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Optional return date in YYYY-MM-DD format for round trips",
+      "examples": ["2026-07-22"]
+    },
     "max_price_dkk": {
       "type": ["integer", "null"],
       "minimum": 0,

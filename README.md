@@ -77,7 +77,7 @@ npm start
 
 When running locally:
 
-http://localhost:5000 (Replace the port if configured differently in `.env`).
+http://localhost:5500 (Replace the port if configured differently in `.env`).
 
 ## Tech Stack
 

@@ -1,17 +1,15 @@
 import { z } from "zod";
 
 export const saveFlightSchema = z.object({
-  flight_number: z.string().optional().nullable(),
-  origin: z
-    .string()
-    .min(3, "Origin airport is required")
-    .max(3, "Use IATA code"),
+  flight_number: z.string().min(1),
 
-  destination: z
-    .string()
-    .min(3, "Destination airport is required")
-    .max(3, "Use IATA code"),
+  origin: z.string().length(3),
 
-  price: z.coerce.number().positive("Price must be positive"),
-  departure_time: z.string().datetime().optional().nullable(),
+  destination: z.string().length(3),
+
+  price: z.coerce.number().positive(),
+
+  departure_time: z.string().datetime(),
+
+  currency_id: z.number().int().optional().nullable(),
 });

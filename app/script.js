@@ -34,40 +34,8 @@ function showNotification(message, type = "success") {
 let isLoginMode = true;
 let flightContext = ""; // Global variable to store origin/dest when date is missing
 let flightsMap = null;
-
-const AIRPORT_COORDINATES = {
-  AMS: { name: "Amsterdam Schiphol", lat: 52.3105, lng: 4.7683 },
-  ARN: { name: "Stockholm Arlanda", lat: 59.6498, lng: 17.9238 },
-  ATL: { name: "Hartsfield-Jackson Atlanta", lat: 33.6407, lng: -84.4277 },
-  BCN: { name: "Barcelona-El Prat", lat: 41.2974, lng: 2.0833 },
-  BER: { name: "Berlin Brandenburg", lat: 52.3667, lng: 13.5033 },
-  CDG: { name: "Paris Charles de Gaulle", lat: 49.0097, lng: 2.5479 },
-  CPH: { name: "Copenhagen", lat: 55.6181, lng: 12.6561 },
-  DAL: { name: "Dallas Love Field", lat: 32.8471, lng: -96.8518 },
-  DFW: { name: "Dallas/Fort Worth", lat: 32.8998, lng: -97.0403 },
-  DOH: { name: "Hamad International", lat: 25.2731, lng: 51.6081 },
-  DXB: { name: "Dubai International", lat: 25.2532, lng: 55.3657 },
-  EWR: { name: "Newark Liberty", lat: 40.6895, lng: -74.1745 },
-  FCO: { name: "Rome Fiumicino", lat: 41.8003, lng: 12.2389 },
-  FRA: { name: "Frankfurt", lat: 50.0379, lng: 8.5622 },
-  HND: { name: "Tokyo Haneda", lat: 35.5494, lng: 139.7798 },
-  IST: { name: "Istanbul", lat: 41.2753, lng: 28.7519 },
-  JFK: { name: "New York JFK", lat: 40.6413, lng: -73.7781 },
-  LAX: { name: "Los Angeles", lat: 33.9416, lng: -118.4085 },
-  LHR: { name: "London Heathrow", lat: 51.47, lng: -0.4543 },
-  LIS: { name: "Lisbon", lat: 38.7742, lng: -9.1342 },
-  MAD: { name: "Madrid-Barajas", lat: 40.4983, lng: -3.5676 },
-  MIA: { name: "Miami", lat: 25.7959, lng: -80.287 },
-  MUC: { name: "Munich", lat: 48.3538, lng: 11.7861 },
-  NRT: { name: "Tokyo Narita", lat: 35.772, lng: 140.3929 },
-  ORD: { name: "Chicago O'Hare", lat: 41.9742, lng: -87.9073 },
-  OSL: { name: "Oslo", lat: 60.1939, lng: 11.1004 },
-  PRG: { name: "Prague", lat: 50.1008, lng: 14.26 },
-  SEA: { name: "Seattle-Tacoma", lat: 47.4502, lng: -122.3088 },
-  SFO: { name: "San Francisco", lat: 37.6213, lng: -122.379 },
-  VIE: { name: "Vienna", lat: 48.1103, lng: 16.5697 },
-  ZRH: { name: "Zurich", lat: 47.4582, lng: 8.5555 },
-};
+let airportsByIataPromise = null;
+let mapRouteRequestId = 0;
 
 // Silent Fallback Data (For when offline or errors occur)
 const backupDatabase = [
@@ -673,19 +641,64 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================
 // 7. DYNAMIC MAP RENDERING
 // ==========================================
-function updateMap(originCode, destinationCode) {
+async function loadAirportsByIata() {
+  if (!airportsByIataPromise) {
+    airportsByIataPromise = fetch("/airports-by-iata.json").then((response) => {
+      if (!response.ok) {
+        throw new Error("Could not load airport coordinates.");
+      }
+      return response.json();
+    });
+  }
+
+  return airportsByIataPromise;
+}
+
+function hideMap() {
   const mapContainer = document.getElementById("mapContainer");
   if (!mapContainer) return;
 
-  const origin = AIRPORT_COORDINATES[originCode];
-  const destination = AIRPORT_COORDINATES[destinationCode];
+  if (flightsMap) {
+    flightsMap.remove();
+    flightsMap = null;
+  }
 
-  if (!origin || !destination || typeof L === "undefined") {
-    if (flightsMap) {
-      flightsMap.remove();
-      flightsMap = null;
-    }
-    mapContainer.classList.add("hidden");
+  mapContainer.classList.add("hidden");
+}
+
+async function updateMap(originCode, destinationCode) {
+  const mapContainer = document.getElementById("mapContainer");
+  if (!mapContainer) return;
+
+  const requestId = ++mapRouteRequestId;
+  const normalizedOriginCode = getIataCode(originCode);
+  const normalizedDestinationCode = getIataCode(destinationCode);
+
+  if (
+    !normalizedOriginCode ||
+    !normalizedDestinationCode ||
+    typeof L === "undefined"
+  ) {
+    hideMap();
+    return;
+  }
+
+  let airportsByIata;
+  try {
+    airportsByIata = await loadAirportsByIata();
+  } catch (error) {
+    console.error("Airport lookup error:", error);
+    hideMap();
+    return;
+  }
+
+  if (requestId !== mapRouteRequestId) return;
+
+  const origin = airportsByIata[normalizedOriginCode];
+  const destination = airportsByIata[normalizedDestinationCode];
+
+  if (!origin || !destination) {
+    hideMap();
     return;
   }
 
@@ -713,9 +726,11 @@ function updateMap(originCode, destinationCode) {
   L.polyline(route, { color: "#2563eb", weight: 4, opacity: 0.8 }).addTo(
     flightsMap,
   );
-  L.marker(route[0]).addTo(flightsMap).bindPopup(`${originCode} - ${origin.name}`);
+  L.marker(route[0])
+    .addTo(flightsMap)
+    .bindPopup(`${normalizedOriginCode} - ${origin.name}`);
   L.marker(route[1])
     .addTo(flightsMap)
-    .bindPopup(`${destinationCode} - ${destination.name}`);
+    .bindPopup(`${normalizedDestinationCode} - ${destination.name}`);
   flightsMap.fitBounds(route, { padding: [34, 34] });
 }

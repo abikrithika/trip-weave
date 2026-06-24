@@ -66,9 +66,7 @@ function normalizeMaxPriceDkk(value) {
 function normalizeVibeTags(value) {
   if (value == null || value === "") return [];
 
-  const tags = Array.isArray(value)
-    ? value
-    : String(value).split(/[,\n]/);
+  const tags = Array.isArray(value) ? value : String(value).split(/[,\n]/);
 
   return tags
     .map((tag) => (typeof tag === "string" ? tag.trim() : String(tag).trim()))
@@ -76,7 +74,8 @@ function normalizeVibeTags(value) {
 }
 
 function normalizeTripQuery(raw) {
-  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const source =
+    raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
 
   return {
     origin_airport: normalizeIataCode(source.origin_airport),
@@ -147,7 +146,7 @@ async function extractTripQuery(userText, opts = {}) {
   const res = await model.doGenerate({
     prompt,
     responseFormat: structuredOutputFormat,
-    maxOutputTokens: 512,
+    maxOutputTokens: 2048,
   });
 
   // Try to parse JSON from the returned content
@@ -187,11 +186,11 @@ async function extractTripQuery(userText, opts = {}) {
 
   // --- PRE-NORMALIZATION FIX ---
   // Ensure vibe_tags is always treated as an array before validation.
-  if (parsed.vibe_tags && typeof parsed.vibe_tags === 'string') {
-     parsed.vibe_tags = [parsed.vibe_tags];
+  if (parsed.vibe_tags && typeof parsed.vibe_tags === "string") {
+    parsed.vibe_tags = [parsed.vibe_tags];
   }
   // -----------------------------
-  
+
   parsed = normalizeTripQuery(parsed);
 
   // Validate against schema
@@ -216,4 +215,9 @@ async function extractTripQuery(userText, opts = {}) {
   return result;
 }
 
-export { extractTripQuery, normalizeTripQuery, isRealDateString, verifyTripQuery };
+export {
+  extractTripQuery,
+  normalizeTripQuery,
+  isRealDateString,
+  verifyTripQuery,
+};

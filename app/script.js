@@ -384,34 +384,86 @@ function renderFlightsToScreen(flightsArray) {
   const container = document.getElementById("flightsContainer");
   if (!container) return;
   container.innerHTML = "";
-
-  // Fetch dynamic currency from LocalStorage
   const userCurrency = localStorage.getItem("userCurrency") || "USD";
-
   flightsArray.forEach((flight) => {
-    // Extracting data properly from Duffel or Mock database
     const origin =
       flight?.slices?.[0]?.origin?.iata_code || flight.origin || "LHR";
+
     const destination =
       flight?.slices?.[0]?.destination?.iata_code ||
       flight.destination ||
       "JFK";
-    const price = flight.total_amount || flight.price || "0.00";
 
+    const price = String(flight.total_amount || flight.price || "0.00");
+    const isSaved = State.savedFlights.some(
+      (savedFlight) =>
+        savedFlight.origin === origin &&
+        savedFlight.destination === destination &&
+        String(savedFlight.price) === price,
+    );
     const card = document.createElement("div");
     card.className =
       "bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center hover:shadow-md transition mb-3";
-
-    // Inject ${userCurrency} directly into the HTML
     card.innerHTML = `
-            <div>
-                <h3 class="font-bold text-gray-800 text-lg">${origin} ➔ ${destination}</h3>
-            </div>
-            <div class="text-right">
-                <p class="font-bold text-xl text-blue-600 mb-2">${userCurrency} ${price}</p>
-                <button class="mt-2 text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition">Save Offer</button>
-            </div>
-        `;
+      <div>
+        <h3 class="font-bold text-gray-800 text-lg">
+          ${origin} ➔ ${destination}
+        </h3>
+      </div>
+      <div class="text-right">
+        <span class="font-bold text-xl text-blue-600 block mb-2">
+          ${userCurrency} ${price}
+        </span>
+        <button 
+          class="fav-btn text-xl transition hover:scale-110"
+          aria-label="Save flight">
+          <i class="${
+            isSaved
+              ? "fa-solid fa-heart text-red-500"
+              : "fa-regular fa-heart text-gray-400"
+          }">
+          </i>
+
+        </button>
+
+      </div>
+    `;
+    const favBtn = card.querySelector(".fav-btn");
+    const heartIcon = favBtn.querySelector("i");
+    favBtn.addEventListener("click", () => {
+      const alreadySaved = State.savedFlights.some(
+        (savedFlight) =>
+          savedFlight.origin === origin &&
+          savedFlight.destination === destination &&
+          String(savedFlight.price) === price,
+      );
+      if (alreadySaved) {
+        State.savedFlights = State.savedFlights.filter(
+          (savedFlight) =>
+            !(
+              savedFlight.origin === origin &&
+              savedFlight.destination === destination &&
+              String(savedFlight.price) === price
+            ),
+        );
+
+        // Change to outline heart
+        heartIcon.classList.remove("fa-solid", "text-red-500");
+        heartIcon.classList.add("fa-regular", "text-gray-400");
+      } else {
+        State.savedFlights.push({
+          origin,
+          destination,
+          price,
+        });
+        // Change to filled heart
+        heartIcon.classList.remove("fa-regular", "text-gray-400");
+
+        heartIcon.classList.add("fa-solid", "text-red-500");
+      }
+      Storage.set("savedFlights", State.savedFlights);
+      renderSavedFlights();
+    });
     container.appendChild(card);
   });
 }

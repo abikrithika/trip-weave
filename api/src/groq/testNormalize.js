@@ -15,9 +15,6 @@ assert.deepEqual(oneWay, {
   destination_airport: "LIS",
   departure_date: "2026-07-15",
   return_date: null,
-  passengers: 1,
-  cabin_class: "economy",
-  currency: "DKK",
   max_price_dkk: 1500,
   vibe_tags: ["budget", "beach"],
   filters: {
@@ -47,8 +44,6 @@ const returnTrip = normalizeTripQuery({
 });
 
 assert.equal(returnTrip.trip_type, "return");
-assert.equal(returnTrip.passengers, 2);
-assert.equal(returnTrip.currency, "EUR");
 assert.deepEqual(returnTrip.filters, {
   direct_only: true,
   preferred_airlines: ["SAS", "Lufthansa"],

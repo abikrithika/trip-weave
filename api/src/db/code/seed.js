@@ -43,10 +43,12 @@ export async function seedUsers() {
         const record = await prisma.user.upsert({
             where: { email: user.email },
             update: {
+                name: user.name,
                 passwordHash: bcrypt.hashSync(user.passwordHash),
                 currencyId,
             },
             create: {
+                name: user.name,
                 email: user.email,
                 passwordHash: bcrypt.hashSync(user.passwordHash),
                 currencyId,

@@ -18,6 +18,18 @@ app.use(express.json());
 
 app.use("/api", apiRoutes);
 
+app.get("/airports-by-iata.json", (req, res) => {
+  res.sendFile(path.join(__dirname, "../../airports-by-iata.json"));
+});
+
+app.use((error, req, res, next) => {
+  console.error(error);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+});
+
 app.use(express.static(path.join(__dirname, "../../app")));
 
 app.get("*splat", (req, res) => {

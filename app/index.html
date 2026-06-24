@@ -1,225 +1,123 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flight AI Assistant</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css">
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body class="bg-gray-50 font-sans antialiased">
-    <header
-      class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm"
-    >
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">🧬</span>
-        <h1 class="text-xl font-bold text-gray-800 tracking-tight">
-          TripWeave
-        </h1>
-      </div>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
 
-      <div class="flex items-center gap-3">
-        <button
-          onclick="toggleDrawer()"
-          class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm"
-        >
-          ⭐ Saved Flights
-        </button>
-        <button
-          id="authNavBtn"
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
-        >
-          Sign In
-        </button>
-      </div>
+  
+    <header class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">🧬</span>
+            <h1 class="text-xl font-bold text-gray-800 tracking-tight">TripWeave</h1>
+        </div>
+        
+  
+        <div class="flex items-center gap-3">
+            <button onclick="toggleDrawer()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
+                ⭐ Saved Flights
+            </button>
+            <button id="authNavBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+                Sign In
+            </button>
+        </div>
     </header>
 
-    <main
-      class="app-container max-w-7xl mx-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-6 h-[calc(100vh-73px)]"
-    >
-      <section
-        class="chat-panel bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden shadow-sm"
-      >
-        <header class="panel-header bg-gray-50 border-b border-gray-200 p-4">
-          <h2 class="font-bold text-gray-700 flex items-center gap-2">
-            🤖 Travel Assistant
-          </h2>
-        </header>
+  
+    <main class="app-container max-w-7xl mx-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-6 h-[calc(100vh-73px)]">
+        
+     
+        <section class="chat-panel bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden shadow-sm">
+            <header class="panel-header bg-gray-50 border-b border-gray-200 p-4">
+                <h2 class="font-bold text-gray-700 flex items-center gap-2">🤖 Travel Assistant</h2>
+            </header>
+            
+            <div class="chat-history flex-1 p-4 overflow-y-auto space-y-4">
+                <div class="message ai-message bg-blue-50 text-blue-900 max-w-[80%] p-3 rounded-2xl rounded-tl-none text-sm shadow-sm">
+                    Hi! Where would you like to fly today?
+                </div>
+                
+            </div>
+            
+            <div class="chat-input-area p-4 border-t border-gray-200 flex gap-2 bg-gray-50">
+                <input type="text" placeholder="Type your message (e.g., 'London')..." id="userInput" class="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black">
+                <button id="sendBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm">Send</button>
+            </div>
+        </section>
 
-        <div class="chat-history flex-1 p-4 overflow-y-auto space-y-4">
-          <div
-            class="message ai-message bg-blue-50 text-blue-900 max-w-[80%] p-3 rounded-2xl rounded-tl-none text-sm shadow-sm"
-          >
-            Hi! Where would you like to fly today?
-          </div>
-        </div>
-
-        <div
-          class="chat-input-area p-4 border-t border-gray-200 flex gap-2 bg-gray-50"
-        >
-          <input
-            type="text"
-            placeholder="Type your message (e.g., 'London')..."
-            id="userInput"
-            class="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-          />
-          <button
-            id="sendBtn"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm"
-          >
-            Send
-          </button>
-        </div>
-      </section>
-
-      <section
-        class="results-panel bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden shadow-sm"
-      >
-        <header class="panel-header bg-gray-50 border-b border-gray-200 p-4">
-          <h2 class="font-bold text-gray-700 flex items-center gap-2">
-            ✈️ Flight Offers
-          </h2>
-        </header>
-        <div
-          id="mapContainer"
-          class="mx-4 mt-4 mb-4 rounded-xl overflow-hidden shadow-sm border border-gray-200 hidden"
-        ></div>
-        <div
-          id="flightsContainer"
-          class="flights-container flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50/50"
-        >
-          <div id="skeletonView" class="text-center text-gray-400 py-16">
-            <p class="text-lg font-medium">
-              🧭 Waiting for your search query...
-            </p>
-            <p class="text-xs text-gray-400 mt-1">
-              Submit a destination in the assistant chat box to generate layout
-              results.
-            </p>
-          </div>
-        </div>
-      </section>
+     
+        <section class="results-panel bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden shadow-sm">
+            <header class="panel-header bg-gray-50 border-b border-gray-200 p-4">
+                <h2 class="font-bold text-gray-700 flex items-center gap-2">✈️ Flight Offers</h2>
+            </header>
+          <div id="mapContainer" class="mx-4 mt-4 mb-4 rounded-xl overflow-hidden shadow-sm border border-gray-200 hidden h-64">
+</div>
+            <div id="flightsContainer" class="flights-container flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50/50">
+               
+                <div id="skeletonView" class="text-center text-gray-400 py-16">
+                    <p class="text-lg font-medium">🧭 Waiting for your search query...</p>
+                    <p class="text-xs text-gray-400 mt-1">Submit a destination in the assistant chat box to generate layout results.</p>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <div
-      id="authModal"
-      class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity"
-    >
-      <div
-        class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative"
-      >
-        <button
-          onclick="closeAuthModal()"
-          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-xl"
-        >
-          &times;
-        </button>
+    <div id="authModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative">
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+            
+            <h2 id="authTitle" class="text-2xl font-bold text-gray-800 mb-6 text-center">Sign In</h2>
+            
+            <form id="authForm" onsubmit="submitAuthForm(event)" class="space-y-4">
+                
+                <div id="nameInputGroup" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" id="nameInput" placeholder="Enter your full name" class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black" />
+                </div>
 
-        <h2
-          id="authTitle"
-          class="text-2xl font-bold text-gray-800 mb-6 text-center"
-        >
-          Sign In
-        </h2>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input type="email" id="emailInput" required placeholder="you@example.com" class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="passwordInput" required placeholder="••••••••" class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black" />
+                </div>
+                
+                <button type="submit" id="authSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium p-3 rounded-lg transition mt-4 shadow-sm">
+                    Sign In
+                </button>
+            </form>
 
-        <form id="authForm" onsubmit="submitAuthForm(event)" class="space-y-4">
-          <div id="nameInputGroup" class="hidden">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Full Name</label
-            >
-            <input
-              type="text"
-              id="nameInput"
-              placeholder="Enter your full name"
-              class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Email Address</label
-            >
-            <input
-              type="email"
-              id="emailInput"
-              required
-              placeholder="you@example.com"
-              class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Password</label
-            >
-            <input
-              type="password"
-              id="passwordInput"
-              required
-              placeholder="••••••••"
-              class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
-            />
-          </div>
-
-          <button
-            type="submit"
-            id="authSubmitBtn"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium p-3 rounded-lg transition mt-4 shadow-sm"
-          >
-            Sign In
-          </button>
-        </form>
-
-        <p class="text-sm text-center text-gray-600 mt-6">
-          <button
-            type="button"
-            onclick="toggleAuthMode()"
-            id="toggleAuthModeBtn"
-            class="text-blue-600 font-medium hover:underline"
-          >
-            Need an account? Sign Up
-          </button>
-        </p>
-      </div>
+            <p class="text-sm text-center text-gray-600 mt-6">
+                <button type="button" onclick="toggleAuthMode()" id="toggleAuthModeBtn" class="text-blue-600 font-medium hover:underline">Need an account? Sign Up</button>
+            </p>
+        </div>
     </div>
 
-    <div
-      id="savedFlightsDrawer"
-      class="fixed top-0 right-0 h-full w-80 sm:w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-40 flex flex-col border-l border-gray-200"
-    >
-      <div
-        class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50"
-      >
-        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-          ⭐ My Saved Offers
-        </h2>
-        <button
-          onclick="toggleDrawer()"
-          class="text-gray-500 hover:text-gray-800 text-xl font-bold p-1"
-        >
-          &times;
-        </button>
-      </div>
-
-      <div
-        id="savedFlightsContainer"
-        class="p-4 flex-1 overflow-y-auto space-y-4"
-      >
-        <p
-          id="emptyDrawerMessage"
-          class="text-gray-500 text-center text-sm mt-8"
-        >
-          Your saved flights will appear here.
-        </p>
-      </div>
+  
+    <div id="savedFlightsDrawer" class="fixed top-0 right-0 h-full w-80 sm:w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-40 flex flex-col border-l border-gray-200">
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">⭐ My Saved Offers</h2>
+            <button onclick="toggleDrawer()" class="text-gray-500 hover:text-gray-800 text-xl font-bold p-1">&times;</button>
+        </div>
+        
+        <div id="savedFlightsContainer" class="p-4 flex-1 overflow-y-auto space-y-4">
+            <p id="emptyDrawerMessage" class="text-gray-500 text-center text-sm mt-8">Your saved flights will appear here.</p>
+        </div>
     </div>
-    <div
-      id="toastContainer"
-      class="fixed top-5 right-5 z-[60] flex flex-col gap-3 pointer-events-none"
-    ></div>
-    <script src="script.js"></script>
-  </body>
+    <div id="toastContainer" class="fixed top-5 right-5 z-[60] flex flex-col gap-3 pointer-events-none"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="script.js"></script>
+</body>
 </html>

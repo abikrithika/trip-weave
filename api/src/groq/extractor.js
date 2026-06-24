@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import dotenv from "dotenv";
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 import { fileURLToPath } from "url";
 import { createGroq } from "@ai-sdk/groq";
 import SYSTEM_PROMPT from "./systemPrompt.js";

@@ -228,12 +228,13 @@ async function testLiveFlightSearch(userPrompt) {
 
     const groqData = await groqResponse.json();
 
-    // SCENARIO 1: Missing Date Only
+    const errors = groqData.errors || [];
+
+    // SCENARIO 1: Missing Date
     if (
       !groqData.success &&
-      groqData.errors?.includes("missing_departure_date") &&
-      !groqData.errors?.includes("missing_origin_airport") &&
-      !groqData.errors?.includes("missing_destination_airport")
+      errors.includes("missing_departure_date") &&
+      !errors.includes("missing_destination_airport")
     ) {
       if (!flightContext || isNewSearch) {
         flightContext = userPrompt;
@@ -257,8 +258,8 @@ async function testLiveFlightSearch(userPrompt) {
     if (
       !groqData.success &&
       (!flightContext || isNewSearch) &&
-      groqData.errors?.includes("missing_origin_airport") &&
-      groqData.errors?.includes("missing_destination_airport")
+      errors.includes("missing_origin_airport") &&
+      errors.includes("missing_destination_airport")
     ) {
       appendChatMessage(
         "I'm just a travel assistant! I can only help you find flights. Try asking me something like 'Find a flight from London to Paris'.",
@@ -269,8 +270,16 @@ async function testLiveFlightSearch(userPrompt) {
       return;
     }
 
+    const canUseOriginFallback =
+      !groqData.success &&
+      errors.includes("missing_origin_airport") &&
+      !errors.includes("missing_destination_airport") &&
+      !errors.includes("missing_departure_date") &&
+      groqData.data?.destination_airport &&
+      groqData.data?.departure_date;
+
     // SCENARIO 3: DATE TYPO (e.g. "o n 14th")
-    if (!groqData.success && flightContext) {
+    if (!groqData.success && flightContext && !canUseOriginFallback) {
       appendChatMessage(
         "I couldn't quite catch that date format. Could you try typing it clearly, like 'July 14th 2026'?",
         "ai",
@@ -282,32 +291,22 @@ async function testLiveFlightSearch(userPrompt) {
     }
 
     if (!groqData.success) {
-      throw new Error(
-        `AI failed to extract flight details. Errors: ${groqData.errors?.join(", ")}`,
-      );
+      if (!canUseOriginFallback) {
+        throw new Error(
+          `AI failed to extract flight details. Errors: ${errors.join(", ")}`,
+        );
+      }
     }
 
     const extracted = groqData.data;
 
-    const duffelPayload = {
-      slices: [
-        {
-          origin: extracted.origin_airport,
-          destination: extracted.destination_airport,
-          departure_date: extracted.departure_date,
-        },
-      ],
-      passengers: [{ type: "adult" }],
-      cabin_class: "economy",
-    };
-
-    console.log("3. Fetching live flights from Duffel...");
+    console.log("3. Fetching live flights through AI flight search...");
     const flightResponse = await fetch(
-      "http://localhost:5050/api/flights/search",
+      "http://localhost:5050/api/flights/ai-search",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(duffelPayload),
+        body: JSON.stringify({ prompt: promptToSend }),
       },
     );
 
@@ -342,7 +341,8 @@ async function testLiveFlightSearch(userPrompt) {
       flightContext = ""; // ONLY wipe memory on absolute success
 
       renderFlightsToScreen(flightData.data.data.offers);
-      const destinationCode = extracted.destination_airport;
+      const destinationCode =
+        flightData.query?.destination_airport || extracted.destination_airport;
       updateMap(`${destinationCode} Airport`);
     } else {
       appendChatMessage(

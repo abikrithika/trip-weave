@@ -94,7 +94,7 @@ body {
 }
 
 .app-shell {
-    width: min(1400px, 100%);
+    width: min(1450px, 100%);
     margin: 14px auto 0;
     padding: 0 18px 128px;
 }
@@ -106,9 +106,25 @@ body {
     box-shadow: var(--card-shadow);
 }
 
-.trending-section {
-    padding: 22px;
+.dashboard-split {
+    display: grid;
+    grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.1fr);
+    gap: 16px;
+    min-height: calc(100vh - 170px);
     animation: raiseIn 420ms ease;
+}
+
+.dashboard-left {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-right {
+    padding: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: minmax(260px, 0.85fr) minmax(280px, 1.15fr);
 }
 
 .section-header {
@@ -124,47 +140,17 @@ body {
     font-family: 'Sora', sans-serif;
 }
 
-.destination-marquee {
-    overflow: hidden;
-    border-radius: 16px;
-    position: relative;
-}
-
-.destination-marquee::before,
-.destination-marquee::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 42px;
-    z-index: 2;
-    pointer-events: none;
-}
-
-.destination-marquee::before {
-    left: 0;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
-}
-
-.destination-marquee::after {
-    right: 0;
-    background: linear-gradient(to left, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
-}
-
-.destination-track {
-    display: flex;
-    gap: 14px;
-    width: max-content;
-    animation: trendTicker 68s linear infinite;
-}
-
-.destination-marquee:hover .destination-track {
-    animation-play-state: paused;
+.destination-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .destination-card {
-    min-height: 250px;
-    min-width: clamp(230px, 20vw, 290px);
+    min-height: 188px;
+    min-width: 0;
     border: 0;
     border-radius: 14px;
     display: flex;
@@ -206,19 +192,15 @@ body {
     opacity: 0.95;
 }
 
-.workspace-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-top: 14px;
-}
-
 .chat-panel,
 .results-panel {
-    min-height: 380px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+}
+
+.chat-panel {
+    border-bottom: 1px solid var(--line);
 }
 
 .panel-header {
@@ -575,23 +557,32 @@ body {
     }
 }
 
-@media (max-width: 1140px) {
-    .destination-track {
-        animation-duration: 76s;
+@media (max-width: 1240px) {
+    .dashboard-split {
+        grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
+    }
+
+    .destination-grid {
+        grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 900px) {
-    .workspace-grid {
+    .dashboard-split {
         grid-template-columns: 1fr;
+        min-height: auto;
     }
 
     .app-shell {
         padding-bottom: 142px;
     }
 
-    .trending-section {
+    .dashboard-left {
         padding: 18px;
+    }
+
+    .dashboard-right {
+        grid-template-rows: minmax(260px, auto) minmax(280px, auto);
     }
 }
 
@@ -612,12 +603,7 @@ body {
     }
 
     .destination-card {
-        min-height: 210px;
-        min-width: 75vw;
-    }
-
-    .destination-track {
-        animation-duration: 84s;
+        min-height: 180px;
     }
 
     .search-dock {

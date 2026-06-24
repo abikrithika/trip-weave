@@ -31,6 +31,7 @@ function showNotification(message, type = 'success') {
 // ==========================================
 let isLoginMode = true;
 let flightContext = ""; // Global variable to store origin/dest when date is missing
+const API_BASE_URL = 'http://localhost:5500';
 
 // Silent Fallback Data (For when offline or errors occur)
 const backupDatabase = [
@@ -99,15 +100,19 @@ async function submitAuthForm(e) {
     if (!isLoginMode) payload.name = name;
 
     try {
-        const response = await fetch(`http://localhost:5050${endpoint}`, {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+        const contentType = response.headers.get('content-type') || '';
+        const data = contentType.includes('application/json')
+            ? JSON.parse(responseText)
+            : null;
 
-        if (!response.ok) throw new Error(data.message || 'Authentication failed');
+        if (!response.ok) throw new Error(data?.message || responseText || 'Authentication failed');
 
         // Success! Save token
         localStorage.setItem('userToken', data.token);
@@ -180,13 +185,25 @@ async function testLiveFlightSearch(userPrompt) {
 
     try {
         console.log("1. Sending prompt to Groq API...", promptToSend);
-        const groqResponse = await fetch('http://localhost:5050/api/groq/extract', {
+        const groqResponse = await fetch(`${API_BASE_URL}/api/groq/extract`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: promptToSend })
         });
 
-        const groqData = await groqResponse.json();
+        const groqResponseText = await groqResponse.text();
+        const groqContentType = groqResponse.headers.get('content-type') || '';
+        let groqData = null;
+
+        if (groqContentType.includes('application/json')) {
+            groqData = JSON.parse(groqResponseText);
+        } else {
+            throw new Error(`Groq API returned non-JSON content (${groqContentType || 'unknown content type'}): ${groqResponseText.slice(0, 160)}`);
+        }
+
+        if (!groqResponse.ok) {
+            throw new Error(groqData?.message || groqResponseText || 'Groq extraction request failed.');
+        }
 
         // SCENARIO 1: Missing Date Only
         if (!groqData.success && groqData.errors?.includes("missing_departure_date") && !groqData.errors?.includes("missing_origin_airport") && !groqData.errors?.includes("missing_destination_airport")) {
@@ -216,7 +233,10 @@ async function testLiveFlightSearch(userPrompt) {
         }
 
         if (!groqData.success) {
-            throw new Error(`AI failed to extract flight details. Errors: ${groqData.errors?.join(', ')}`);
+            const extractionDetails = Array.isArray(groqData.errors) && groqData.errors.length > 0
+                ? groqData.errors.join(', ')
+                : (groqData.message || 'unknown extraction error');
+            throw new Error(`AI failed to extract flight details: ${extractionDetails}`);
         }
 
         const extracted = groqData.data;
@@ -234,13 +254,21 @@ async function testLiveFlightSearch(userPrompt) {
         };
 
         console.log("3. Fetching live flights from Duffel...");
-        const flightResponse = await fetch('http://localhost:5050/api/flights/search', {
+        const flightResponse = await fetch(`${API_BASE_URL}/api/flights/search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(duffelPayload)
         });
 
-        const flightData = await flightResponse.json();
+        const flightResponseText = await flightResponse.text();
+        const flightContentType = flightResponse.headers.get('content-type') || '';
+        let flightData = null;
+
+        if (flightContentType.includes('application/json')) {
+            flightData = JSON.parse(flightResponseText);
+        } else {
+            throw new Error(`Flight API returned non-JSON content (${flightContentType || 'unknown content type'}): ${flightResponseText.slice(0, 160)}`);
+        }
 
         // SCENARIO 4: Safely Handle Past Dates and API Errors right here
         if (!flightResponse.ok || flightData.success === false || flightData.error || flightData.errors || !flightData.data) {
@@ -265,7 +293,18 @@ async function testLiveFlightSearch(userPrompt) {
 
     } catch (error) {
         console.error("🚨 Search Error:", error);
-        appendChatMessage("I couldn't quite process that. Let's try again! (Make sure your request is formatted clearly).", 'ai');
+
+        const rawErrorMessage = error?.message || '';
+        const normalizedErrorMessage = rawErrorMessage.toLowerCase();
+
+        if (normalizedErrorMessage.includes('groq api key is missing') || normalizedErrorMessage.includes('api_loadapikeyerror')) {
+            appendChatMessage("The server is missing GROQ_API_KEY in .env, so AI extraction cannot run. Add GROQ_API_KEY and restart the backend on port 5500.", 'ai');
+        } else if (normalizedErrorMessage.includes('failed to fetch')) {
+            appendChatMessage("I cannot reach the backend. Make sure the server is running at http://localhost:5500 and try again.", 'ai');
+        } else {
+            appendChatMessage(`I couldn't process this request: ${rawErrorMessage || 'unknown error'}.`, 'ai');
+        }
+
         if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for travel date...</div>';
     }
 }

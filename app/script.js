@@ -643,12 +643,14 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================
 async function loadAirportsByIata() {
   if (!airportsByIataPromise) {
-    airportsByIataPromise = fetch("/airports-by-iata.json").then((response) => {
-      if (!response.ok) {
-        throw new Error("Could not load airport coordinates.");
-      }
-      return response.json();
-    });
+    airportsByIataPromise = fetch("data/airports-by-iata.json").then(
+      (response) => {
+        if (!response.ok) {
+          throw new Error("Could not load airport coordinates.");
+        }
+        return response.json();
+      },
+    );
   }
 
   return airportsByIataPromise;

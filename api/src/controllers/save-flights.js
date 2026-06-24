@@ -1,36 +1,30 @@
 import prisma from "../db/code/prisma.js";
 import { saveFlightSchema } from "../schemas/save-flight-schemas.js";
-// GET /api/saved-flights
+import { serialize } from "../utils/serialize.js";
+
 export async function getSaved(req, res, next) {
   try {
-    const userId = Number(req.user?.user_id ?? 1);
+    const userId = Number(req.user.userId);
 
     const flights = await prisma.savedOffer.findMany({
-      where: {
-        userId,
-      },
-      include: {
-        currency: true,
-      },
-      orderBy: {
-        departureTime: "asc",
-      },
+      where: { userId },
+      include: { currency: true },
+      orderBy: { departureTime: "asc" },
     });
 
     return res.status(200).json({
       success: true,
-      flights,
+      flights: serialize(flights),
     });
   } catch (error) {
     next(error);
   }
 }
-
-// POST /api/saved-flights
 export async function saveFlight(req, res, next) {
   try {
-    const validation = saveFlightSchema.safeParse(req.body);
+    const userId = Number(req.user.userId);
 
+    const validation = saveFlightSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
         success: false,
@@ -47,8 +41,6 @@ export async function saveFlight(req, res, next) {
       currency_id,
     } = validation.data;
 
-    const userId = Number(req.user?.user_id ?? 1);
-
     const existing = await prisma.savedOffer.findFirst({
       where: {
         userId,
@@ -62,6 +54,19 @@ export async function saveFlight(req, res, next) {
         success: false,
         message: "Flight already saved",
       });
+    }
+
+    if (currency_id) {
+      const currency = await prisma.currency.findUnique({
+        where: { id: currency_id },
+      });
+
+      if (!currency) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid currency_id",
+        });
+      }
     }
 
     const savedFlight = await prisma.savedOffer.create({
@@ -78,24 +83,20 @@ export async function saveFlight(req, res, next) {
 
     return res.status(201).json({
       success: true,
-      flight: savedFlight,
+      flight: serialize(savedFlight),
     });
   } catch (error) {
     next(error);
   }
 }
-// DELETE /api/saved-flights/:id
+
 export async function removeFlight(req, res, next) {
   try {
-    const { id } = req.params;
-
-    const userId = Number(req.user?.user_id ?? 1);
+    const userId = Number(req.user.userId);
+    const id = BigInt(req.params.id);
 
     const flight = await prisma.savedOffer.findFirst({
-      where: {
-        id: BigInt(id),
-        userId,
-      },
+      where: { id, userId },
     });
 
     if (!flight) {
@@ -106,9 +107,7 @@ export async function removeFlight(req, res, next) {
     }
 
     await prisma.savedOffer.delete({
-      where: {
-        id: BigInt(id),
-      },
+      where: { id },
     });
 
     return res.status(200).json({

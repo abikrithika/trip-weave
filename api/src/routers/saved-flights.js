@@ -4,10 +4,10 @@ import {
   saveFlight,
   removeFlight,
 } from "../controllers/save-flights.js";
-// import { authMiddleware } from "../middleware/auth.js";
+import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
-router.get("/saved", getSaved);
-router.post("/save", saveFlight);
-router.delete("/save/:id", removeFlight);
+router.get("/saved", authMiddleware, getSaved);
+router.post("/save", authMiddleware, saveFlight);
+router.delete("/save/:id", authMiddleware, removeFlight);
 export default router;

@@ -18,6 +18,14 @@ app.use(express.json());
 
 app.use("/api", apiRoutes);
 
+app.use((error, req, res, next) => {
+  console.error(error);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+});
+
 app.use(express.static(path.join(__dirname, "../../app")));
 
 app.get("*splat", (req, res) => {

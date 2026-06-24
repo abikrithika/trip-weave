@@ -173,7 +173,10 @@ function normalizeFilters(value) {
 function normalizeTripQuery(raw) {
   const source =
     raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
-
+  const returnDate =
+    source.return_date == null || source.return_date === ""
+      ? null
+      : source.return_date;
   return {
     trip_type: normalizeTripType(source.trip_type, returnDate),
     origin_airport: normalizeIataCode(source.origin_airport),
@@ -182,10 +185,7 @@ function normalizeTripQuery(raw) {
       source.departure_date == null || source.departure_date === ""
         ? null
         : source.departure_date,
-    return_date:
-      source.return_date == null || source.return_date === ""
-        ? null
-        : source.return_date,
+    return_date: returnDate,
     max_price_dkk: normalizeMaxPriceDkk(source.max_price_dkk),
     vibe_tags: normalizeVibeTags(source.vibe_tags),
     filters: normalizeFilters(source.filters),

@@ -2,7 +2,7 @@ Search flights using Duffel (POST)
 
 Search flights from an AI prompt (Groq + Duffel)
 
-POST http://localhost:5050/api/flights/ai-search
+POST http://localhost:5500/api/flights/ai-search
 
 test data in body
 Example:
@@ -24,7 +24,7 @@ data: the Duffel response
 
 How to test this endpoint using POSTMAN
 
-POST http://localhost:5050/api/flights/search
+POST http://localhost:5500/api/flights/search
 
 test data in body
 Example:
@@ -60,7 +60,7 @@ Check the output
 
 How to test with mock-flights data
 
-POST http://localhost:5050/api/flights/search
+POST http://localhost:5500/api/flights/search
 
 test data in body
 

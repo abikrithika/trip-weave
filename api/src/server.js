@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import apiRoutes from "./routers/api.js";
+import { apiErrorHandler, apiNotFoundHandler } from "./middleware/errors.js";
 import prisma from "./db/code/prisma.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,12 +21,15 @@ app.use(express.json());
 app.use(express.static(path.resolve(__dirname, "../../app")));
 
 app.use("/api", apiRoutes);
+app.use("/api", apiNotFoundHandler);
 
 app.get("*splat", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../../app/index.html"));
 });
 
-const PORT = process.env.PORT || 5050;
+app.use(apiErrorHandler);
+
+const PORT = process.env.PORT || 5500;
 
 async function startServer() {
   await prisma.$connect();

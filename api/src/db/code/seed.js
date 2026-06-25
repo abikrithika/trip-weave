@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { pathToFileURL } from "url";
 import { readFile } from "fs/promises";
 import prisma from "./prisma.js";

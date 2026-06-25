@@ -14,7 +14,7 @@
     "db:validate": "prisma validate --config api/src/db/code/prisma.config.js",
     "db:create": "node api/src/db/code/ensureDatabase.js",
     "db:migrate": "prisma migrate dev --config api/src/db/code/prisma.config.js",
-    "db:seed": "prisma db seed --config api/src/db/code/prisma.config.js",
+    "db:seed": "node api/src/db/code/seed.js",
     "db:deploy": "prisma migrate deploy --config api/src/db/code/prisma.config.js",
     "db:all": "cd api/src/db && npm run db:create && npm run db:validate && npm run db:migrate && npm run db:generate && npm run db:seed",
     "start:frontend": "http-server ./app",
@@ -51,5 +51,8 @@
     "http-server": "^14.1.1",
     "nodemon": "^3.1.14",
     "prisma": "^4.16.2"
+  },
+  "prisma": {
+    "seed": "node api/src/db/code/seed.js"
   }
 }

@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import dotenv from "dotenv";
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 import { fileURLToPath } from "url";
 import { createGroq } from "@ai-sdk/groq";
 import SYSTEM_PROMPT from "./systemPrompt.js";
@@ -186,8 +188,7 @@ function normalizeTripQuery(raw) {
       source.departure_date == null || source.departure_date === ""
         ? null
         : source.departure_date,
-    return_date:
-      returnDate,
+    return_date: returnDate,
     max_price_dkk: normalizeMaxPriceDkk(source.max_price_dkk),
     vibe_tags: normalizeVibeTags(source.vibe_tags),
     filters: normalizeFilters(source.filters),

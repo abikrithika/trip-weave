@@ -28,6 +28,10 @@ npm install
 ### 3. Install Nodemon
 
 npm install --save-dev nodemon
+npm install -g concurrently
+npm install -g http-server
+npm install jsonwebtoken
+npm install bcrypt
 
 ## Environment Variables
 

@@ -1,3 +1,4 @@
+let currentFlights = [];
 // ==========================================
 // 1. CUSTOM NOTIFICATIONS (TOASTS)
 // ==========================================
@@ -76,7 +77,14 @@ function closeAuthModal() {
 
 function toggleDrawer() {
   const drawer = document.getElementById("savedFlightsDrawer");
-  if (drawer) drawer.classList.toggle("translate-x-full");
+
+  if (!drawer) return;
+
+  drawer.classList.toggle("translate-x-full");
+
+  if (!drawer.classList.contains("translate-x-full")) {
+    loadSavedFlights();
+  }
 }
 
 function toggleAuthMode() {
@@ -536,7 +544,10 @@ function getFlightDisplayData(flight, fallbackCurrency) {
     departureLabel: formatTime(departureTime),
     arrivalLabel: formatTime(arrivalTime),
     duration: formatDuration(outbound?.duration, departureTime, arrivalTime),
-    stops: segmentCount <= 1 ? "Direct" : `${segmentCount - 1} stop${segmentCount > 2 ? "s" : ""}`,
+    stops:
+      segmentCount <= 1
+        ? "Direct"
+        : `${segmentCount - 1} stop${segmentCount > 2 ? "s" : ""}`,
     baggage: getBaggageSummary(flight, firstSegment),
     airline: getAirlineName(flight, firstSegment),
     airlineIata,
@@ -567,14 +578,15 @@ function renderFlightsToScreen(flightsArray) {
       '<div class="text-center text-gray-500 py-8">No flight offers found.</div>';
     return;
   }
-
-  const displayFlights = flightsArray.map((flight) =>
+  currentFlights = flightsArray.map((flight) =>
     getFlightDisplayData(flight, userCurrency),
   );
 
+  const displayFlights = currentFlights;
+
   updateMap(displayFlights[0].origin, displayFlights[0].destination);
 
-  displayFlights.forEach((flight) => {
+  displayFlights.forEach((flight, index) => {
     const logo = flight.logoUrl
       ? `<img src="${flight.logoUrl}" alt="${flight.airline} logo" class="h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-100" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <div class="h-12 w-12 rounded-lg bg-blue-50 text-blue-700 font-bold items-center justify-center border border-blue-100" style="display:none;">${flight.airlineIata || flight.airline.slice(0, 2).toUpperCase()}</div>`
@@ -605,9 +617,19 @@ function renderFlightsToScreen(flightsArray) {
                     }
                 </div>
                 <div class="text-right shrink-0">
-                    <p class="font-bold text-xl text-blue-600 mb-2">${flight.price}</p>
-                    <button class="mt-2 text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition">Save Offer</button>
-                </div>
+    <p class="font-bold text-xl text-blue-600 mb-2">
+      ${flight.price}
+    </p>
+
+    <button
+      class="save-flight-btn text-xl text-gray-500 hover:text-red-500 transition"
+      data-index="${index}"
+      aria-label="Save flight"
+    >
+      <i class="fa-regular fa-heart"></i>
+    </button>
+</div>
+               
             </div>
         `;
 

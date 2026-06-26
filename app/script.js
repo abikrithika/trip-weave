@@ -3,24 +3,24 @@ import { testLiveFlightSearch } from './js/flights.js';
 import { updateNavUI, submitAuthForm, toggleAuthMode } from './js/auth.js';
 import { toggleDrawer } from './js/ui.js';
 
-
+// Expose functions to the window for inline HTML onclick attributes
 window.toggleDrawer = toggleDrawer;
 window.submitAuthForm = submitAuthForm;
 window.toggleAuthMode = toggleAuthMode;
+window.closeAuthModal = () => document.getElementById("authModal").classList.add("hidden");
+window.openAuthModal = () => document.getElementById("authModal").classList.remove("hidden");
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Initialize UI
     updateNavUI();
     loadChatHistory();
 
-    // 2. Chat Input Listeners
     const sendBtn = document.getElementById("sendBtn");
     const userInput = document.getElementById("userInput");
 
     function handleSend() {
         const prompt = userInput.value;
         if (prompt.trim() !== "") {
-            appendChatMessage(prompt, "user", true);
+            appendChatMessage(prompt, "user");
             userInput.value = "";
             testLiveFlightSearch(prompt);
         }
@@ -32,20 +32,4 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.key === "Enter") handleSend();
         });
     }
-
-    // 3. Auth & UI Listeners (Fixing the onclick issues)
-    const authForm = document.getElementById("authForm");
-    if (authForm) authForm.addEventListener("submit", submitAuthForm);
-
-  const toggleAuthBtn = document.getElementById("toggleAuthModeBtn");
-if (toggleAuthBtn) {
-    console.log("Toggle button found!"); // Check if this prints in F12 Console
-    toggleAuthBtn.addEventListener("click", toggleAuthMode);
-} else {
-    console.error("Toggle button NOT found in the DOM!");
-}
-
-    const drawerBtn = document.getElementById("savedFlightsToggleBtn"); // Ensure this ID matches your HTML
-    if (drawerBtn) drawerBtn.addEventListener("click", toggleDrawer);
 });
-

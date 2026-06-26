@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flight AI Assistant</title>
-    <link rel="stylesheet" href="style.css">
+   
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
@@ -72,7 +72,7 @@
         </section>
     </main>
 
-    <div id="authModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity">
+    <div id="authModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center z-50 p-4 transition-opacity">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative">
             <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
             
@@ -100,7 +100,9 @@
             </form>
 
             <p class="text-sm text-center text-gray-600 mt-6">
-                <button type="button" onclick="toggleAuthMode()" id="toggleAuthModeBtn" class="text-blue-600 font-medium hover:underline">Need an account? Sign Up</button>
+               <button type="button" id="toggleAuthModeBtn" class="text-blue-600 font-medium hover:underline">
+    Need an account? Sign Up
+</button>
             </p>
         </div>
     </div>
@@ -118,6 +120,6 @@
     </div>
     <div id="toastContainer" class="fixed top-5 right-5 z-[60] flex flex-col gap-3 pointer-events-none"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="script.js"></script>
+<script type="module" src="script.js"></script>
 </body>
 </html>

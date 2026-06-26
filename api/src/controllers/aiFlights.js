@@ -28,13 +28,22 @@ function buildDuffelSearchPayload(tripQuery) {
 }
 
 export const aiFlightSearchController = async (req, res, next) => {
-  const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
+  console.log("--- DEBUG: RECEIVED PAYLOAD ---");
+  console.log(JSON.stringify(req.body, null, 2));
+if (req.body.slices) {
+    try {
+      if (!req.body.slices[0].origin) {
+        req.body.slices[0].origin = await detectFallbackOrigin(req);
+      }
+      const flights = await searchFlights(req.body);
+      return res.status(200).json({ success: true, data: flights });
+    } catch (error) { return next(error); }
+  }
 
-  if (typeof userText !== "string" || userText.trim() === "") {
-    return res.status(400).json({
-      success: false,
-      message: "Request body must include a non-empty prompt string.",
-    });
+const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
+
+ if (typeof userText !== "string" || userText.trim() === "") {
+    return res.status(400).json({ success: false, message: "Missing request data." });
   }
 
   try {

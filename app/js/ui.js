@@ -1,5 +1,7 @@
+import { openAuthModal, closeAuthModal, toggleAuthMode } from './auth.js';
 export function showNotification(message, type = "success") {
   const container = document.getElementById("toastContainer");
+  container.innerHTML = '';
   const toast = document.createElement("div");
   const bgColor = type === "success" ? "bg-green-600" : "bg-red-600";
   const icon = type === "success" ? "✅" : "⚠️";
@@ -30,3 +32,6 @@ export function toggleDrawer() {
 }
 
 window.toggleDrawer = toggleDrawer;
+window.openAuthModal = openAuthModal;
+window.closeAuthModal = closeAuthModal;
+window.toggleAuthMode = toggleAuthMode;

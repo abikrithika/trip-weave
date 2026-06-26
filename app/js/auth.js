@@ -3,10 +3,15 @@ import { loadChatHistory } from './chat.js';
 
 let isLoginMode = true;
 
-export function openAuthModal() { document.getElementById("authModal").style.display = "block"; }
+export function openAuthModal() { 
+    document.getElementById("authModal").classList.remove("hidden"); 
+}
+
 export function closeAuthModal() { 
-    document.getElementById("authModal").style.display = "none"; 
+    document.getElementById("authModal").classList.add("hidden"); 
     document.getElementById("authForm").reset(); 
+    
+    if (!isLoginMode) toggleAuthMode(); 
 }
 
 export function toggleAuthMode() {
@@ -21,19 +26,27 @@ export function toggleAuthMode() {
     title.innerText = "Sign In";
     submitBtn.innerText = "Sign In";
     toggleBtn.innerText = "Need an account? Sign Up";
-    nameGroup.style.display = "none";
+    nameGroup.classList.add("hidden"); 
     nameInput.removeAttribute("required");
   } else {
     title.innerText = "Sign Up";
     submitBtn.innerText = "Create Account";
     toggleBtn.innerText = "Already have an account? Sign In";
-    nameGroup.style.display = "block";
+    nameGroup.classList.remove("hidden"); 
     nameInput.setAttribute("required", "true");
   }
 }
 
 export async function submitAuthForm(e) {
+   const submitBtn = document.getElementById("authSubmitBtn");
+   if (submitBtn.disabled) return;
   e.preventDefault();
+ 
+  
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Processing...";
+  }
 
   const email = document.getElementById("emailInput").value.trim();
   const password = document.getElementById("passwordInput").value;
@@ -48,7 +61,11 @@ export async function submitAuthForm(e) {
         "Password must be at least 8 characters long, contain at least one letter and one number.",
         "error",
       );
-      return;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Create Account";
+      }
+      return; 
     }
   }
 
@@ -71,25 +88,31 @@ export async function submitAuthForm(e) {
     localStorage.setItem("userToken", data.token);
     localStorage.removeItem("conversationId");
 
-    // TASK 3: Save the currency
+    // Save the currency
     if (data.user && data.user.currency) {
       localStorage.setItem("userCurrency", data.user.currency.code);
     } else {
       localStorage.setItem("userCurrency", "USD");
     }
 
+    // Correctly show notification based on mode
     showNotification(
       isLoginMode ? "Login successful!" : "Registration successful!",
-      "success",
+      "success"
     );
+    
     closeAuthModal();
     updateNavUI();
-    
-    // NEW: Fetch their private history immediately after modal closes!
     loadChatHistory();
+    
   } catch (error) {
     console.error("Auth Error:", error);
     showNotification(error.message, "error");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = isLoginMode ? "Sign In" : "Create Account";
+    }
   }
 }
 

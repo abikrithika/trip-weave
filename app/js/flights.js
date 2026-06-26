@@ -1,10 +1,23 @@
 import { appendChatMessage } from './chat.js';
 import { showNotification } from './ui.js';
+
+const fullSchemaInstruction = `
+    RETURN A VALID JSON OBJECT WITH THESE KEYS:
+    "origin_airport", "destination_airport", "departure_date", "trip_type", "return_date", "max_price_dkk", "vibe_tags", "filters".
+    
+    RULES:
+    1. Assume the year is 2026.
+    2. Convert countries/cities to 3-letter IATA codes (e.g., India -> DEL).
+    3. STRICTLY format "departure_date" as YYYY-MM-DD (e.g., 2026-12-06). 
+    4. If the user input is ambiguous, infer the most logical upcoming date.
+    5. If any field is missing, use NULL.
+`;
+
 let flightContext = "";
+
 export async function testLiveFlightSearch(userPrompt) {
   if (!navigator.onLine) {
-    showNotification("You are currently offline! Showing saved backup flights.", "error");
-    renderFlightsToScreen(backupDatabase);
+    showNotification("You are currently offline!", "error");
     return;
   }
 
@@ -12,201 +25,186 @@ export async function testLiveFlightSearch(userPrompt) {
   if (container) {
     container.innerHTML = '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium animate-pulse">Searching global flights...</p></div>';
   }
-  const mapContainer = document.getElementById("mapContainer");
-  if (mapContainer) mapContainer.classList.add("hidden");
 
   const formattedUserPrompt = userPrompt.trim();
   const lowerPrompt = formattedUserPrompt.toLowerCase();
 
-  // SMARTER MEMORY: Detect if the user is completely changing their mind
-  const isNewSearch =
-    lowerPrompt.includes("fly to") ||
-    lowerPrompt.includes("flight") ||
-    (lowerPrompt.includes(" to ") && !lowerPrompt.match(/\d/)); // Matches "to paris" but ignores dates like "10 to 12"
+  // 1. Preserve state
+  let currentSearchData = {};
+  try {
+      currentSearchData = flightContext ? JSON.parse(flightContext) : {};
+  } catch(e) { currentSearchData = {}; }
 
-  // If they are starting a brand new search, completely wipe the old memory!
+  // 2. Only wipe if a brand new search intent is detected
+  const isNewSearch = lowerPrompt.includes("fly to") || lowerPrompt.includes("flight");
   if (isNewSearch) {
-    flightContext = "";
+      flightContext = "";
+      currentSearchData = {};
   }
 
-  let promptToSend = "";
-  if (flightContext) {
-    promptToSend = `The user previously asked for: "${flightContext}". They are now replying with: "${formattedUserPrompt}". Extract the origin_airport, destination_airport, and departure_date. Assume the current year is 2026. If they specify a year (like 2027), strictly use it. STRICT INSTRUCTION: Convert entire countries to 3-letter IATA airport codes (e.g., Italy -> FCO). Do NOT include 'cabin_class', 'currency', or 'passengers' in your JSON.`;
-  } else {
-    promptToSend = `Extract a flight search query (origin, destination, date) from this text: "${formattedUserPrompt}". Assume the current year is 2026. STRICT INSTRUCTION: Convert entire countries or cities into 3-letter IATA airport codes (e.g., Italy -> FCO). Do NOT include 'cabin_class', 'currency', or 'passengers' in your JSON.`;
-  }
+  // 3. Prompt uses preserved info
+  const promptToSend = `Current known flight info: ${JSON.stringify(currentSearchData)}. User update: "${formattedUserPrompt}". Merge these to extract full flight details. ${fullSchemaInstruction.replace(/\n/g, ' ')}`;
 
   try {
-    console.log("1. Sending prompt to Groq API...", promptToSend);
-    const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptToSend }),
-    });
+  const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: promptToSend }),
+  });
+if (!groqResponse.ok) {
+        // This will now trigger your catch block
+        throw new Error("422"); 
+    }
+ const groqData = await groqResponse.json();
+   const extracted = groqData.data || {};
 
-    const groqData = await groqResponse.json();
-    const errors = groqData.errors || [];
-    const errorString = JSON.stringify(errors);
+   // --- NEW: FORCE NULL IF DATE IS NOT EXPLICITLY IN PROMPT ---
+   // Check if the user prompt actually contains numbers/date words
+   const dateKeywords = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec', '2026', '2027', 'tomorrow', 'next'];
+   const hasDateInPrompt = dateKeywords.some(word => lowerPrompt.includes(word)) || /\d+/.test(formattedUserPrompt);
+   
+   if (!hasDateInPrompt) {
+       extracted.departure_date = null;
+   }
+    
+    // Merge new data with old data so we don't lose the destination!
+  const mergedData = { ...currentSearchData, ...extracted };
+flightContext = JSON.stringify(mergedData);
 
-    // FIX 1: Explicitly catch and report Groq Rate Limits!
-    if (errorString.includes("Rate limit")) {
-      appendChatMessage("I'm receiving too many requests right now! Please wait about 10 seconds and try sending your message again.", "ai", true);
-      if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for rate limit to reset...</div>';
+  const hasMeaningfulData = mergedData.destination_airport || mergedData.departure_date;
+    
+    if (!hasMeaningfulData && isNewSearch === false) {
+        appendChatMessage("I'm sorry, I didn't quite catch that. Could you tell me where you'd like to fly?", "ai", true);
+        return;
+    }
+
+    flightContext = JSON.stringify(mergedData); 
+
+    if (mergedData.departure_date && !/^\d{4}-\d{2}-\d{2}$/.test(mergedData.departure_date)) {
+    appendChatMessage("I understood the date, but it seems to be in an unusual format. Could you try 'YYYY-MM-DD'?", "ai", true);
+    return;
+}
+
+    // --- GUARD CLAUSES ---
+// 1. Check if we have the destination
+    if (!mergedData.destination_airport) {
+      appendChatMessage("I'm not sure which city you want to visit. Could you be more specific?", "ai", true);
       return;
     }
 
-    // SCENARIO 1: Missing Date
-    if (!groqData.success && errors.includes("missing_departure_date") && !errors.includes("missing_destination_airport")) {
-      flightContext = formattedUserPrompt; // Save the destination for the next round
-      appendChatMessage("I'd love to find that flight for you! When would you like to travel?", "ai", true);
-      if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for travel date...</div>';
-      return;
+    // 2. Check if we have the date
+    if (!mergedData.departure_date) {
+        appendChatMessage("I've got the destination, but when are you planning to fly?", "ai", true);
+        if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for travel date...</div>';
+        return; 
     }
 
-    // SCENARIO 2: Total Gibberish
-    if (!groqData.success && !flightContext && errors.includes("missing_origin_airport") && errors.includes("missing_destination_airport")) {
-      appendChatMessage("I'm just a travel assistant! I can only help you find flights. Try asking me something like 'Find a flight from London to Paris'.", "ai", true);
-      if (container) container.innerHTML = "";
-      flightContext = "";
-      return;
-    }
+   // 3. Validate the date (Past check)
+    const today = new Date("2026-06-26");
+    const depDate = new Date(mergedData.departure_date);
+    if (depDate < today) {
+       
+        mergedData.departure_date = null;
+        flightContext = JSON.stringify(mergedData);
+    
+        
+        appendChatMessage("That date has already passed. Please provide a future date.", "ai", true);
+        return;
+     }
 
-    const canUseOriginFallback =
-      !groqData.success &&
-      errors.includes("missing_origin_airport") &&
-      !errors.includes("missing_destination_airport") &&
-      !errors.includes("missing_departure_date") &&
-      groqData.data?.destination_airport &&
-      groqData.data?.departure_date;
-
-    // SCENARIO 3: DATE TYPO (e.g. "o n 14th")
-    if (!groqData.success && flightContext && !canUseOriginFallback) {
-      appendChatMessage("I couldn't quite catch that date format. Could you try typing it clearly, like 'July 14th 2026'?", "ai", true);
-      if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for travel date...</div>';
-      return;
-    }
-
-    if (!groqData.success && !canUseOriginFallback) {
-      throw new Error(`AI failed to extract flight details. Errors: ${errors.join(", ")}`);
-    }
-
-    const extracted = groqData.data;
-
+   // 4. If we reach here, we have everything! Now we search.
     console.log("3. Fetching live flights through AI flight search...");
-    const flightResponse = await fetch("http://localhost:5050/api/flights/ai-search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptToSend }),
-    });
+    const payload = {
+        slices: [{
+            origin: mergedData.origin_airport || undefined, 
+            destination: mergedData.destination_airport,
+            departure_date: mergedData.departure_date
+        }],
+        passengers: [{ type: "adult" }],
+        cabin_class: "economy"
+    };
 
+    const flightResponse = await fetch("http://localhost:5050/api/flights/ai-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
     const flightData = await flightResponse.json();
 
-    // SCENARIO 4: API Error (Past dates, invalid routes)
-    if (!flightResponse.ok || flightData.success === false || flightData.error || flightData.errors || !flightData.data) {
-      appendChatMessage("Oops! The flight system rejected that request. If you entered a date in the past, please try a future date instead!", "ai", true);
-      if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for a new travel date...</div>';
-      return; // Keep memory alive so they can just type a new date!
+    if (!flightResponse.ok || !flightData.data) {
+      throw new Error("Flight system error");
     }
 
-    // SCENARIO 5: Success!
-    if (flightData.data.data && flightData.data.data.offers && flightData.data.data.offers.length > 0) {
-      console.log("🎉 Live Flights Found!");
-      flightContext = ""; // ONLY wipe memory on absolute success
+    if (flightData.data.data?.offers?.length > 0) {
+      flightContext = ""; // Clear on success
       renderFlightsToScreen(flightData.data.data.offers);
-      const destinationCode = flightData.query?.destination_airport || extracted.destination_airport;
-      updateMap(`${destinationCode} Airport`);
+      updateMap(`${mergedData.destination_airport} Airport`);
     } else {
-      appendChatMessage("I couldn't find any flights for those dates. Try another date?", "ai", true);
-      if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for a new travel date...</div>';
+      appendChatMessage("I couldn't find any flights for that date. Try another?", "ai", true);
+      if (container) container.innerHTML = '';
     }
   } catch (error) {
     console.error("🚨 Search Error:", error);
-    appendChatMessage("I couldn't quite process that. Let's try again! (Make sure your request is formatted clearly).", "ai", true);
-    if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for input...</div>';
+
+    // 1. Clear the UI completely so no "Waiting" messages persist
+    if (container) container.innerHTML = '';
+    
+    // 2. Check for Rate Limit or Server connection issues
+    if (error.message.includes("422") || error.message.includes("Flight system error") || error.message.includes("Failed to fetch")) {
+        appendChatMessage("I'm currently experiencing high traffic and cannot connect to my flight database. Please wait a few minutes before trying again.", "ai", true);
+        return; // Stops the function here
+    } 
+  
+    // 3. Otherwise, handle standard processing errors
+    else {
+        appendChatMessage("I couldn't process that request. Could you try phrasing it differently?", "ai", true);
+        return; // Stops the function here
+    }
   }
 }
-
+function getAirlineIata(flight) {
+   return (
+        flight?.owner?.iata_code || 
+        flight?.airline_iata || 
+        flight?.slices?.[0]?.segments?.[0]?.marketing_carrier?.iata_code || 
+        ""
+    ).toUpperCase();
+}
 export function renderFlightsToScreen(flightsArray) {
   const container = document.getElementById("flightsContainer");
   if (!container) return;
   container.innerHTML = "";
-
-  // Fetch dynamic currency from LocalStorage
   const userCurrency = localStorage.getItem("userCurrency") || "USD";
 
   flightsArray.forEach((flight) => {
-    const slices = flight?.slices || [];
-    const first = slices[0] || {};
-    const second = slices[1] || null;
-
-    const origin = first?.origin?.iata_code || flight.origin || "LHR";
-    const destination =
-      first?.destination?.iata_code || flight.destination || "JFK";
-
-    // Try to extract readable dates/times from common fields
-    const departInfo =
-      first.departure_date ||
-      first?.segments?.[0]?.departure_time ||
-      flight.departure_time ||
-      "";
-    const returnInfo = second
-      ? second.departure_date || second?.segments?.[0]?.departure_time || ""
-      : null;
-
-    const airline =
-      flight?.owner_name ||
-      flight?.airline ||
-      flight?.slices?.[0]?.segments?.[0]?.marketing_carrier?.name ||
-      "Airline";
-    const price =
-      flight?.total_amount &&
-      (typeof flight.total_amount === "string" ||
-        typeof flight.total_amount === "number")
-        ? flight.total_amount
-        : flight?.total_amount?.amount || flight.price || "0.00";
+    const airlineIata = getAirlineIata(flight);
+    const logoUrl = airlineIata ? `https://www.gstatic.com/flights/airline_logos/70px/${airlineIata}.png` : "";
 
     const card = document.createElement("div");
-    card.className =
-      "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-3";
-
+    card.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-3";
+    
     card.innerHTML = `
-            <div class="flex-1">
-                <h3 class="font-bold text-gray-800 text-lg">${origin} ➔ ${destination} ${
-                  returnInfo
-                    ? '<span class="ml-2 inline-block bg-green-100 text-green-800 text-xs font-semibold px-2 py-0.5 rounded">Round-trip</span>'
-                    : '<span class="ml-2 inline-block bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-0.5 rounded">One-way</span>'
-                }</h3>
-                <p class="text-sm text-gray-600">${airline}</p>
-                <p class="text-sm text-gray-700 mt-2">Depart: ${departInfo || "TBD"}</p>
-                ${returnInfo ? `<p class="text-sm text-gray-700">Return: ${returnInfo}</p>` : ""}
-            </div>
-            <div class="text-right ml-4">
-                <p class="font-bold text-xl text-blue-600 mb-2">${userCurrency} ${price}</p>
-                <button class="mt-2 text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition">Save Offer</button>
-            </div>
-        `;
-
+      <div class="flex items-start gap-4">
+        ${logoUrl ? `<img src="${logoUrl}" class="h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-100" onerror="this.style.display='none';">` : ""}
+        <div class="flex-1">
+            <h3 class="font-bold text-gray-800 text-lg">${flight.slices?.[0]?.origin?.iata_code || "N/A"} ➔ ${flight.slices?.[0]?.destination?.iata_code || "N/A"}</h3>
+            <p class="text-sm text-gray-600">${flight.owner_name || "Airline"}</p>
+        </div>
+        <div class="text-right">
+            <p class="font-bold text-xl text-blue-600">${userCurrency} ${flight.total_amount || "0.00"}</p>
+        </div>
+      </div>`;
     container.appendChild(card);
   });
 }
 
-
 export function updateMap(destinationQuery) {
   const mapContainer = document.getElementById("mapContainer");
   if (!mapContainer) return;
-
-  // Remove the 'hidden' class to show the map
   mapContainer.classList.remove("hidden");
-
-  // Inject the standard Google Maps iframe (with the $ properly included!)
   mapContainer.innerHTML = `
-        <iframe 
-            width="100%" 
-            height="250" 
-            style="border:0;" 
-            loading="lazy" 
-            allowfullscreen
-            src="https://maps.google.com/maps?q=${encodeURIComponent(destinationQuery)}&t=&z=12&ie=UTF8&iwloc=&output=embed">
-        </iframe>
-    `;
+        <iframe width="100%" height="250" style="border:0;" loading="lazy" allowfullscreen
+            src="https://www.google.com/maps?q=${encodeURIComponent(destinationQuery)}&t=&z=12&ie=UTF8&iwloc=&output=embed"
+        </iframe>`;
 }
+

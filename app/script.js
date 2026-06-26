@@ -3,6 +3,11 @@ import { testLiveFlightSearch } from './js/flights.js';
 import { updateNavUI, submitAuthForm, toggleAuthMode } from './js/auth.js';
 import { toggleDrawer } from './js/ui.js';
 
+
+window.toggleDrawer = toggleDrawer;
+window.submitAuthForm = submitAuthForm;
+window.toggleAuthMode = toggleAuthMode;
+
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Initialize UI
     updateNavUI();
@@ -32,9 +37,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const authForm = document.getElementById("authForm");
     if (authForm) authForm.addEventListener("submit", submitAuthForm);
 
-    const toggleAuthBtn = document.getElementById("toggleAuthModeBtn");
-    if (toggleAuthBtn) toggleAuthBtn.addEventListener("click", toggleAuthMode);
+  const toggleAuthBtn = document.getElementById("toggleAuthModeBtn");
+if (toggleAuthBtn) {
+    console.log("Toggle button found!"); // Check if this prints in F12 Console
+    toggleAuthBtn.addEventListener("click", toggleAuthMode);
+} else {
+    console.error("Toggle button NOT found in the DOM!");
+}
 
     const drawerBtn = document.getElementById("savedFlightsToggleBtn"); // Ensure this ID matches your HTML
     if (drawerBtn) drawerBtn.addEventListener("click", toggleDrawer);
 });
+

@@ -6,44 +6,29 @@ import cors from "cors";
 import apiRoutes from "./routers/api.js";
 import prisma from "./db/code/prisma.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
+// Log incoming requests
+app.use((req, res, next) => { console.log(`[${req.method}] ${req.url}`); next(); });
+
+// Routes
 app.use("/api", apiRoutes);
 
-app.use((error, req, res, next) => {
-  console.error(error);
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-  });
+// Error Handling (Must be after routes)
+app.use((err, req, res, next) => {
+  console.error("BACKEND ERROR:", err);
+  res.status(500).json({ success: false, message: err.message });
 });
 
+// Static + Catch-all
 app.use(express.static(path.join(__dirname, "../../app")));
-
-app.get("*splat", (req, res) => {
-  res.sendFile(path.join(__dirname, "../../app/index.html"));
-});
+app.get(/(.*)/, (req, res) => res.sendFile(path.join(__dirname, "../../app/index.html")));
 
 const PORT = process.env.PORT || 5050;
-
-async function startServer() {
-  await prisma.$connect();
-
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`http://localhost:${PORT}`);
-  });
-}
-
-startServer().catch((error) => {
-  console.error("Failed to start server", error);
-  process.exit(1);
-});
+await prisma.$connect();
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

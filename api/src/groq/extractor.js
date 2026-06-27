@@ -30,7 +30,8 @@ export async function extractTripQuery(userText, opts = {}) {
     if (!textPart) return { ok: false, errors: ["no_response"] };
     
     const parsed = JSON.parse(textPart);
-    const valid = validate(parsed);
+  const valid = validate(parsed);
+  console.error("AJV VALIDATION FAILED:", validate.errors);
     
     if (!valid) return { ok: false, parsed, errors: validate.errors.map(e => e.message) };
     return { ok: true, parsed };

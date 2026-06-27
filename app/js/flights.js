@@ -1,5 +1,8 @@
 import { appendChatMessage } from './chat.js';
 import { showNotification } from './ui.js';
+import { setCurrentFlights } from '../script.js';
+let currentFlights = [];
+export const getCurrentFlights = () => currentFlights;
 
 const fullSchemaInstruction = `
     RETURN A VALID JSON OBJECT WITH THESE KEYS:
@@ -176,7 +179,19 @@ export function renderFlightsToScreen(flightsArray) {
   container.innerHTML = "";
   const userCurrency = localStorage.getItem("userCurrency") || "USD";
 
-  flightsArray.forEach((flight) => {
+  // Update the module-level variable
+  currentFlights = flightsArray.map(f => ({ 
+      ...f, 
+      price: f.total_amount, 
+      origin: f.slices?.[0]?.origin?.iata_code, 
+      destination: f.slices?.[0]?.destination?.iata_code,
+      departureTime: f.slices?.[0]?.segments?.[0]?.departing_at // Added for save-flights.js compatibility
+  }));
+
+  // Update state in script.js (if you are using the setter)
+  setCurrentFlights(currentFlights);
+
+  flightsArray.forEach((flight, index) => {
     const airlineIata = getAirlineIata(flight);
     const logoUrl = airlineIata ? `https://www.gstatic.com/flights/airline_logos/70px/${airlineIata}.png` : "";
 
@@ -192,6 +207,9 @@ export function renderFlightsToScreen(flightsArray) {
         </div>
         <div class="text-right">
             <p class="font-bold text-xl text-blue-600">${userCurrency} ${flight.total_amount || "0.00"}</p>
+            <button class="save-flight-btn text-gray-500 hover:text-red-500 transition" data-index="${index}">
+                <i class="fa-regular fa-heart"></i>
+            </button>
         </div>
       </div>`;
     container.appendChild(card);

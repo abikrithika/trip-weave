@@ -3,22 +3,68 @@
   "title": "TripQuery",
   "type": "object",
   "additionalProperties": false,
-  "required": ["destination_airport"],
+  "required": [
+    "destination_airport"
+  ],
   "properties": {
-    "trip_type": { "type": ["string", "null"], "enum": ["one_way", "return", null] },
-    "origin_airport": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
-    "destination_airport": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
-    "departure_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-    "return_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-    "max_price_dkk": { "type": ["integer", "null"], "minimum": 0 },
-    "vibe_tags": { "type": ["array", "null"], "items": { "type": "string" } },
+    "trip_type": {
+      "type": ["string", "null"],
+      "enum": ["one_way", "return", null]
+    },
+    "origin_airport": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{3}$"
+    },
+    "destination_airport": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{3}$"
+    },
+    "departure_date": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "return_date": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "passengers": {
+      "type": ["integer", "null"]
+    },
+    "cabin_class": {
+      "type": ["string", "null"]
+    },
+    "currency": {
+      "type": ["string", "null"]
+    },
+    "max_price_dkk": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "vibe_tags": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      }
+    },
     "filters": {
       "type": "object",
       "properties": {
-        "direct_only": { "type": ["boolean", "null"] },
-        "preferred_airlines": { "type": ["array", "null"], "items": { "type": "string" } },
-        "baggage_required": { "type": ["boolean", "null"] },
-        "departure_time": { "type": ["string", "null"], "enum": ["morning", "afternoon", "evening", "night", null] }
+        "direct_only": {
+          "type": ["boolean", "null"]
+        },
+        "preferred_airlines": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "baggage_required": {
+          "type": ["boolean", "null"]
+        },
+        "departure_time": {
+          "type": ["string", "null"],
+          "enum": ["morning", "afternoon", "evening", "night", null]
+        }
       }
     }
   }

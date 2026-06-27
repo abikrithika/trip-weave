@@ -1,6 +1,11 @@
-import { openAuthModal, closeAuthModal, toggleAuthMode } from './auth.js';
+// Re-export authentication functions so they can be imported from ui.js
+export { openAuthModal, closeAuthModal, toggleAuthMode } from './auth.js';
+import { loadSavedFlights } from '../save-flights.js';
+
 export function showNotification(message, type = "success") {
   const container = document.getElementById("toastContainer");
+  if (!container) return;
+  
   container.innerHTML = '';
   const toast = document.createElement("div");
   const bgColor = type === "success" ? "bg-green-600" : "bg-red-600";
@@ -27,10 +32,16 @@ export function showNotification(message, type = "success") {
 }
 
 export function toggleDrawer() {
-  const drawer = document.getElementById("savedFlightsDrawer");
-  if (drawer) drawer.classList.toggle("translate-x-full");
+const drawer = document.getElementById("savedFlightsDrawer");
+if (!drawer) return;
+drawer.classList.toggle("translate-x-full");
+if (!drawer.classList.contains("translate-x-full")) {
+    loadSavedFlights(); 
+  }
 }
 
+// Keep these globally exposed for HTML 'onclick' handlers
+import { openAuthModal, closeAuthModal, toggleAuthMode } from './auth.js';
 window.toggleDrawer = toggleDrawer;
 window.openAuthModal = openAuthModal;
 window.closeAuthModal = closeAuthModal;

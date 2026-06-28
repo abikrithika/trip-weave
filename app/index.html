@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trip-Weave</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
@@ -26,6 +27,7 @@
       </div>
       <div class="topbar-actions">
         <button onclick="toggleDrawer()" class="btn btn-ghost">
+          <i class="fa-solid fa-heart text-red-500"></i>
           Saved Flights
         </button>
         <button id="authNavBtn" class="btn btn-primary">Sign In</button>
@@ -287,5 +289,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="script.js"></script>
+    <script type="module" src="save-flights.js"></script>
   </body>
 </html>

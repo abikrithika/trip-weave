@@ -1,5 +1,5 @@
-import { appendChatMessage } from './chat.js';
-import { showNotification } from './ui.js';
+import { appendChatMessage } from "./chat.js";
+import { showNotification } from "./ui.js";
 
 const fullSchemaInstruction = `
     RETURN A VALID JSON OBJECT WITH THESE KEYS:
@@ -23,7 +23,8 @@ export async function testLiveFlightSearch(userPrompt) {
 
   const container = document.getElementById("flightsContainer");
   if (container) {
-    container.innerHTML = '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium animate-pulse">Searching global flights...</p></div>';
+    container.innerHTML =
+      '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium animate-pulse">Searching global flights...</p></div>';
   }
 
   const formattedUserPrompt = userPrompt.trim();
@@ -32,103 +33,154 @@ export async function testLiveFlightSearch(userPrompt) {
   // 1. Preserve state
   let currentSearchData = {};
   try {
-      currentSearchData = flightContext ? JSON.parse(flightContext) : {};
-  } catch(e) { currentSearchData = {}; }
+    currentSearchData = flightContext ? JSON.parse(flightContext) : {};
+  } catch (e) {
+    currentSearchData = {};
+  }
 
   // 2. Only wipe if a brand new search intent is detected
-  const isNewSearch = lowerPrompt.includes("fly to") || lowerPrompt.includes("flight");
+  const isNewSearch =
+    lowerPrompt.includes("fly to") || lowerPrompt.includes("flight");
   if (isNewSearch) {
-      flightContext = "";
-      currentSearchData = {};
+    flightContext = "";
+    currentSearchData = {};
   }
 
   // 3. Prompt uses preserved info
-  const promptToSend = `Current known flight info: ${JSON.stringify(currentSearchData)}. User update: "${formattedUserPrompt}". Merge these to extract full flight details. ${fullSchemaInstruction.replace(/\n/g, ' ')}`;
+  const promptToSend = `Current known flight info: ${JSON.stringify(currentSearchData)}. User update: "${formattedUserPrompt}". Merge these to extract full flight details. ${fullSchemaInstruction.replace(/\n/g, " ")}`;
 
   try {
-  const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt: promptToSend }),
-  });
-if (!groqResponse.ok) {
-        // This will now trigger your catch block
-        throw new Error("422"); 
+    const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: promptToSend }),
+    });
+    if (!groqResponse.ok) {
+      // This will now trigger your catch block
+      throw new Error("422");
     }
- const groqData = await groqResponse.json();
-   const extracted = groqData.data || {};
+    const groqData = await groqResponse.json();
+    const extracted = groqData.data || {};
 
-   // --- NEW: FORCE NULL IF DATE IS NOT EXPLICITLY IN PROMPT ---
-   // Check if the user prompt actually contains numbers/date words
-   const dateKeywords = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec', '2026', '2027', 'tomorrow', 'next'];
-   const hasDateInPrompt = dateKeywords.some(word => lowerPrompt.includes(word)) || /\d+/.test(formattedUserPrompt);
-   
-   if (!hasDateInPrompt) {
-       extracted.departure_date = null;
-   }
-    
+    // --- NEW: FORCE NULL IF DATE IS NOT EXPLICITLY IN PROMPT ---
+    // Check if the user prompt actually contains numbers/date words
+    const dateKeywords = [
+      "jan",
+      "feb",
+      "mar",
+      "apr",
+      "may",
+      "jun",
+      "jul",
+      "aug",
+      "sep",
+      "oct",
+      "nov",
+      "dec",
+      "2026",
+      "2027",
+      "tomorrow",
+      "next",
+    ];
+    const hasDateInPrompt =
+      dateKeywords.some((word) => lowerPrompt.includes(word)) ||
+      /\d+/.test(formattedUserPrompt);
+
+    if (!hasDateInPrompt) {
+      extracted.departure_date = null;
+    }
+
     // Merge new data with old data so we don't lose the destination!
-  const mergedData = { ...currentSearchData, ...extracted };
-flightContext = JSON.stringify(mergedData);
+    const mergedData = { ...currentSearchData, ...extracted };
+    flightContext = JSON.stringify(mergedData);
 
-  const hasMeaningfulData = mergedData.destination_airport || mergedData.departure_date;
-    
+    const hasMeaningfulData =
+      mergedData.destination_airport || mergedData.departure_date;
+
     if (!hasMeaningfulData && isNewSearch === false) {
-        appendChatMessage("I'm sorry, I didn't quite catch that. Could you tell me where you'd like to fly?", "ai", true);
-        return;
+      appendChatMessage(
+        "I'm sorry, I didn't quite catch that. Could you tell me where you'd like to fly?",
+        "ai",
+        true,
+      );
+      return;
     }
 
-    flightContext = JSON.stringify(mergedData); 
+    flightContext = JSON.stringify(mergedData);
 
-    if (mergedData.departure_date && !/^\d{4}-\d{2}-\d{2}$/.test(mergedData.departure_date)) {
-    appendChatMessage("I understood the date, but it seems to be in an unusual format. Could you try 'YYYY-MM-DD'?", "ai", true);
-    return;
-}
+    if (
+      mergedData.departure_date &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(mergedData.departure_date)
+    ) {
+      appendChatMessage(
+        "I understood the date, but it seems to be in an unusual format. Could you try 'YYYY-MM-DD'?",
+        "ai",
+        true,
+      );
+      return;
+    }
 
     // --- GUARD CLAUSES ---
-// 1. Check if we have the destination
+    // 1. Check if we have the destination
     if (!mergedData.destination_airport) {
-      appendChatMessage("I'm not sure which city you want to visit. Could you be more specific?", "ai", true);
+      appendChatMessage(
+        "I'm not sure which city you want to visit. Could you be more specific?",
+        "ai",
+        true,
+      );
       return;
     }
 
     // 2. Check if we have the date
     if (!mergedData.departure_date) {
-        appendChatMessage("I've got the destination, but when are you planning to fly?", "ai", true);
-        if (container) container.innerHTML = '<div class="text-center text-gray-500 py-8">Waiting for travel date...</div>';
-        return; 
+      appendChatMessage(
+        "I've got the destination, but when are you planning to fly?",
+        "ai",
+        true,
+      );
+      if (container)
+        container.innerHTML =
+          '<div class="text-center text-gray-500 py-8">Waiting for travel date...</div>';
+      return;
     }
 
-   // 3. Validate the date (Past check)
+    // 3. Validate the date (Past check)
     const today = new Date("2026-06-26");
     const depDate = new Date(mergedData.departure_date);
     if (depDate < today) {
-       
-        mergedData.departure_date = null;
-        flightContext = JSON.stringify(mergedData);
-    
-        
-        appendChatMessage("That date has already passed. Please provide a future date.", "ai", true);
-        return;
-     }
+      mergedData.departure_date = null;
+      flightContext = JSON.stringify(mergedData);
 
-   // 4. If we reach here, we have everything! Now we search.
+      appendChatMessage(
+        "That date has already passed. Please provide a future date.",
+        "ai",
+        true,
+      );
+      return;
+    }
+
+    // 4. If we reach here, we have everything! Now we search.
     console.log("3. Fetching live flights through AI flight search...");
     const payload = {
-        slices: [{
-            origin: mergedData.origin_airport || undefined, 
-            destination: mergedData.destination_airport,
-            departure_date: mergedData.departure_date
-        }],
-        passengers: [{ type: "adult" }],
-        cabin_class: "economy"
+      slices: [
+        {
+          origin: mergedData.origin_airport || undefined,
+          destination: mergedData.destination_airport,
+          departure_date: mergedData.departure_date,
+        },
+      ],
+      passengers: [{ type: "adult" }],
+      cabin_class: "economy",
     };
 
-    const flightResponse = await fetch("http://localhost:5050/api/flights/ai-search", {
+    const flightResponse = await fetch(
+      "http://localhost:5050/api/flights/ai-search",
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-    });
+      },
+    );
     const flightData = await flightResponse.json();
 
     if (!flightResponse.ok || !flightData.data) {
@@ -140,35 +192,51 @@ flightContext = JSON.stringify(mergedData);
       renderFlightsToScreen(flightData.data.data.offers);
       updateMap(`${mergedData.destination_airport} Airport`);
     } else {
-      appendChatMessage("I couldn't find any flights for that date. Try another?", "ai", true);
-      if (container) container.innerHTML = '';
+      appendChatMessage(
+        "I couldn't find any flights for that date. Try another?",
+        "ai",
+        true,
+      );
+      if (container) container.innerHTML = "";
     }
   } catch (error) {
     console.error("🚨 Search Error:", error);
 
     // 1. Clear the UI completely so no "Waiting" messages persist
-    if (container) container.innerHTML = '';
-    
+    if (container) container.innerHTML = "";
+
     // 2. Check for Rate Limit or Server connection issues
-    if (error.message.includes("422") || error.message.includes("Flight system error") || error.message.includes("Failed to fetch")) {
-        appendChatMessage("I'm currently experiencing high traffic and cannot connect to my flight database. Please wait a few minutes before trying again.", "ai", true);
-        return; // Stops the function here
-    } 
-  
+    if (
+      error.message.includes("422") ||
+      error.message.includes("Flight system error") ||
+      error.message.includes("Failed to fetch")
+    ) {
+      appendChatMessage(
+        "I'm currently experiencing high traffic and cannot connect to my flight database. Please wait a few minutes before trying again.",
+        "ai",
+        true,
+      );
+      return; // Stops the function here
+    }
+
     // 3. Otherwise, handle standard processing errors
     else {
-        appendChatMessage("I couldn't process that request. Could you try phrasing it differently?", "ai", true);
-        return; // Stops the function here
+      appendChatMessage(
+        "I couldn't process that request. Could you try phrasing it differently?",
+        "ai",
+        true,
+      );
+      return; // Stops the function here
     }
   }
 }
 function getAirlineIata(flight) {
-   return (
-        flight?.owner?.iata_code || 
-        flight?.airline_iata || 
-        flight?.slices?.[0]?.segments?.[0]?.marketing_carrier?.iata_code || 
-        ""
-    ).toUpperCase();
+  return (
+    flight?.owner?.iata_code ||
+    flight?.airline_iata ||
+    flight?.slices?.[0]?.segments?.[0]?.marketing_carrier?.iata_code ||
+    ""
+  ).toUpperCase();
 }
 export function renderFlightsToScreen(flightsArray) {
   const container = document.getElementById("flightsContainer");
@@ -178,22 +246,55 @@ export function renderFlightsToScreen(flightsArray) {
 
   flightsArray.forEach((flight) => {
     const airlineIata = getAirlineIata(flight);
-    const logoUrl = airlineIata ? `https://www.gstatic.com/flights/airline_logos/70px/${airlineIata}.png` : "";
+    const logoUrl = airlineIata
+      ? `https://www.gstatic.com/flights/airline_logos/70px/${airlineIata}.png`
+      : "";
 
     const card = document.createElement("div");
-    card.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-3";
-    
-    card.innerHTML = `
-      <div class="flex items-start gap-4">
-        ${logoUrl ? `<img src="${logoUrl}" class="h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-100" onerror="this.style.display='none';">` : ""}
-        <div class="flex-1">
-            <h3 class="font-bold text-gray-800 text-lg">${flight.slices?.[0]?.origin?.iata_code || "N/A"} ➔ ${flight.slices?.[0]?.destination?.iata_code || "N/A"}</h3>
-            <p class="text-sm text-gray-600">${flight.owner_name || "Airline"}</p>
-        </div>
-        <div class="text-right">
-            <p class="font-bold text-xl text-blue-600">${userCurrency} ${flight.total_amount || "0.00"}</p>
-        </div>
-      </div>`;
+    card.className =
+      "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-3";
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex items-start gap-4";
+
+    if (logoUrl) {
+      const logo = document.createElement("img");
+      logo.src = logoUrl;
+      logo.className =
+        "h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-100";
+      logo.onerror = () => {
+        logo.style.display = "none";
+      };
+      wrapper.appendChild(logo);
+    }
+
+    const details = document.createElement("div");
+    details.className = "flex-1";
+    const route = document.createElement("h3");
+    route.className = "font-bold text-gray-800 text-lg";
+    route.textContent = `${flight.slices?.[0]?.origin?.iata_code || "N/A"} ➔ ${flight.slices?.[0]?.destination?.iata_code || "N/A"}`;
+    const airline = document.createElement("p");
+    airline.className = "text-sm text-gray-600";
+    airline.textContent = flight.owner_name || "Airline";
+    details.append(route, airline);
+
+    const priceColumn = document.createElement("div");
+    priceColumn.className = "text-right flex flex-col items-end gap-2";
+    const price = document.createElement("p");
+    price.className = "font-bold text-xl text-blue-600";
+    price.textContent = `${userCurrency} ${flight.total_amount || "0.00"}`;
+
+    const saveButton = document.createElement("button");
+    saveButton.type = "button";
+    saveButton.className =
+      "save-flight-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50";
+    saveButton.dataset.flight = JSON.stringify(flight);
+    saveButton.setAttribute("aria-label", "Save flight");
+    saveButton.innerHTML = '<i class="fa-regular fa-heart"></i>';
+
+    priceColumn.append(price, saveButton);
+    wrapper.append(details, priceColumn);
+    card.appendChild(wrapper);
     container.appendChild(card);
   });
 }
@@ -207,4 +308,3 @@ export function updateMap(destinationQuery) {
             src="https://www.google.com/maps?q=${encodeURIComponent(destinationQuery)}&t=&z=12&ie=UTF8&iwloc=&output=embed"
         </iframe>`;
 }
-

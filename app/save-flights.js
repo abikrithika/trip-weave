@@ -1,4 +1,123 @@
+import { openAuthModal } from "./js/auth.js";
+import { showNotification } from "./js/ui.js";
+
 const SAVED_FLIGHTS_API = "http://localhost:5050/api/saved-flights";
+
+function normalizeDepartureTime(value) {
+  if (!value) {
+    throw new Error("Departure time is missing");
+  }
+
+  const dateObj = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(dateObj.getTime())) {
+    throw new Error(`Invalid departure_time value: ${value}`);
+  }
+
+  const isoTime = dateObj.toISOString();
+  return isoTime.endsWith("Z") ? isoTime : `${isoTime}Z`;
+}
+
+function findFirstValue(obj, keys) {
+  if (!obj || typeof obj !== "object") return null;
+
+  for (const key of keys) {
+    const value = obj[key];
+    if (value !== undefined && value !== null && value !== "") {
+      return value;
+    }
+  }
+
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === "object") {
+      const nested = findFirstValue(value, keys);
+      if (nested !== null) {
+        return nested;
+      }
+    }
+  }
+
+  return null;
+}
+
+function normalizeFlightForSave(flight) {
+  const firstSlice = flight?.slices?.[0] ?? {};
+  const firstSegment = firstSlice?.segments?.[0] ?? {};
+
+  const originAirport =
+    flight?.origin || firstSlice?.origin || firstSegment?.origin || null;
+  const destinationAirport =
+    flight?.destination ||
+    firstSlice?.destination ||
+    firstSegment?.destination ||
+    null;
+
+  const rawPrice = findFirstValue(flight, [
+    "price",
+    "total_amount",
+    "intended_total_amount",
+    "base_amount",
+    "amount",
+    "totalAmount",
+    "intendedTotalAmount",
+  ]);
+
+  const parsedPrice =
+    typeof rawPrice === "string"
+      ? Number.parseFloat(rawPrice.match(/[\d.]+/)?.[0] ?? "0")
+      : Number(rawPrice ?? 0);
+
+  const origin = String(
+    originAirport?.iata_code ||
+      originAirport?.iataCode ||
+      originAirport?.code ||
+      flight?.origin_code ||
+      flight?.origin ||
+      "",
+  )
+    .toUpperCase()
+    .slice(0, 3);
+
+  const destination = String(
+    destinationAirport?.iata_code ||
+      destinationAirport?.iataCode ||
+      destinationAirport?.code ||
+      flight?.destination_code ||
+      flight?.destination ||
+      "",
+  )
+    .toUpperCase()
+    .slice(0, 3);
+
+  const departureValue = findFirstValue(flight, [
+    "departureTime",
+    "departure_time",
+    "departing_at",
+    "departure",
+  ]);
+
+  return {
+    origin,
+    destination,
+    departureTime: normalizeDepartureTime(departureValue),
+    price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
+    flightNumber:
+      flight?.flight_number ||
+      flight?.flightNumber ||
+      firstSegment?.marketing_carrier_flight_number ||
+      firstSegment?.operating_carrier_flight_number ||
+      flight?.id ||
+      "UNKNOWN",
+    airline:
+      flight?.airline ||
+      flight?.airline_name ||
+      flight?.owner_name ||
+      firstSegment?.marketing_carrier?.name ||
+      firstSegment?.operating_carrier?.name ||
+      "UNKNOWN",
+  };
+}
+
 async function saveFlight(flight) {
   const token = localStorage.getItem("userToken");
 
@@ -11,56 +130,16 @@ async function saveFlight(flight) {
     console.log("===== SAVE FLIGHT DEBUG =====");
     console.log("Raw flight object:", JSON.stringify(flight, null, 2));
 
-    // Transform flight object to match backend schema
-    // Price might be formatted like "1200 USD", extract just the number
-    let price = flight.price;
-    if (typeof price === "string") {
-      const match = price.match(/[\d.]+/);
-      price = match ? parseFloat(match[0]) : 0;
-    }
+    const normalizedFlight = normalizeFlightForSave(flight);
+    console.log("Normalized flight payload:", normalizedFlight);
 
-    console.log("Parsed price:", price, typeof price);
-
-    // Ensure departure_time is ISO format with timezone
-    let departureTime = flight.departureTime;
-    if (!departureTime) {
-      throw new Error("Departure time is missing");
-    }
-
-    // Force conversion to Date, then to ISO string with Z
-    let dateObj;
-    if (departureTime instanceof Date) {
-      dateObj = departureTime;
-    } else if (typeof departureTime === "string") {
-      dateObj = new Date(departureTime);
-    } else {
-      throw new Error(`Invalid departure_time type: ${typeof departureTime}`);
-    }
-
-    if (isNaN(dateObj.getTime())) {
-      throw new Error(`Invalid departure_time value: ${departureTime}`);
-    }
-
-    // Always convert to ISO string with Z timezone
-    departureTime = dateObj.toISOString();
-
-    // Ensure it ends with Z (safety check)
-    if (!departureTime.endsWith("Z")) {
-      departureTime = departureTime + "Z";
-    }
-
-    console.log("Parsed departureTime:", departureTime);
-
-    const origin = String(flight.origin || "").toUpperCase();
-    const destination = String(flight.destination || "").toUpperCase();
-    const flightNumber = String(
-      flight.airlineIata || flight.airline || "UNKNOWN",
-    );
+    const { origin, destination, departureTime, flightNumber, price } =
+      normalizedFlight;
 
     const flightData = {
-      flight_number: flightNumber,
-      origin: origin,
-      destination: destination,
+      flight_number: String(flightNumber),
+      origin,
+      destination,
       price: Math.max(0, price),
       departure_time: departureTime,
       currency_id: null,
@@ -86,8 +165,8 @@ async function saveFlight(flight) {
 
     console.log("Validation passed, sending flight data:", flightData);
     console.log("=============================");
-    console.log("⏰ DEPARTURE TIME FINAL VALUE:", flightData.departure_time);
-    console.log("⏰ HAS Z?:", flightData.departure_time.endsWith("Z"));
+    console.log(" DEPARTURE TIME FINAL VALUE:", flightData.departure_time);
+    console.log(" HAS Z?:", flightData.departure_time.endsWith("Z"));
 
     const response = await fetch(`${SAVED_FLIGHTS_API}/save`, {
       method: "POST",
@@ -104,7 +183,7 @@ async function saveFlight(flight) {
     console.log("DATA (formatted):", JSON.stringify(data, null, 2));
 
     if (!response.ok) {
-      console.error("❌ Backend returned error:");
+      console.error(" Backend returned error:");
       console.error("Message:", data.message);
       console.error("Errors object:", data.errors);
 
@@ -224,15 +303,21 @@ document.addEventListener("click", async (event) => {
 
   if (!button) return;
 
-  const index = Number(button.dataset.index);
+  const flight = JSON.parse(button.dataset.flight || "{}");
 
-  const flight = currentFlights[index];
+  if (!flight || Object.keys(flight).length === 0) {
+    showNotification("Unable to save this flight right now.", "error");
+    return;
+  }
 
   const saved = await saveFlight(flight);
 
   if (saved) {
     button.innerHTML = '<i class="fa-solid fa-heart text-red-500"></i>';
-
     button.disabled = true;
+    loadSavedFlights();
   }
 });
+
+window.deleteSavedFlight = deleteSavedFlight;
+window.loadSavedFlights = loadSavedFlights;

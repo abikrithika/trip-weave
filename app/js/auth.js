@@ -11,10 +11,11 @@ export function closeAuthModal() {
     document.getElementById("authModal").classList.add("hidden"); 
     document.getElementById("authForm").reset(); 
     
-    if (!isLoginMode) toggleAuthMode(); 
+    // if (!isLoginMode) toggleAuthMode(); 
 }
 
 export function toggleAuthMode() {
+  console.log('Toggling auth mode');
   isLoginMode = !isLoginMode;
   const title = document.getElementById("authTitle");
   const submitBtn = document.getElementById("authSubmitBtn");
@@ -100,7 +101,7 @@ export async function submitAuthForm(e) {
       isLoginMode ? "Login successful!" : "Registration successful!",
       "success"
     );
-    
+    console.log("I'm submitting the auth form and it worked!");
     closeAuthModal();
     updateNavUI();
     loadChatHistory();

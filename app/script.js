@@ -18,7 +18,7 @@ export const setCurrentFlights = (val) => { currentFlights = val; };
 
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Initialize core UI
-    updateNavUI();
+    //updateNavUI();
     loadChatHistory();
 
     // 2. Chat listeners
@@ -43,8 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const authForm = document.getElementById("authForm");
     if (authForm) authForm.addEventListener("submit", submitAuthForm);
 
-    const toggleAuthBtn = document.getElementById("toggleAuthModeBtn");
-    if (toggleAuthBtn) toggleAuthBtn.addEventListener("click", toggleAuthMode);
+    // const toggleAuthBtn = document.getElementById("toggleAuthModeBtn");
+    // if (toggleAuthBtn) toggleAuthBtn.addEventListener("click", toggleAuthMode);
 
     // 4. Save Flight Button Listener (Event Delegation)
     document.addEventListener("click", async (event) => {

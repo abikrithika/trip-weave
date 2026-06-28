@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flight AI Assistant</title>
+    <title>Trip-Weave</title>
     <link rel="stylesheet" href="style.css" />
     <link
       rel="stylesheet"
@@ -13,272 +13,277 @@
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
-
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TripWeave | Flight AI Assistant</title>
-    
-    <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body class="bg-gray-50 font-sans antialiased">
-    <header
-      class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm"
-    >
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">🧬</span>
-        <h1 class="text-xl font-bold text-gray-800 tracking-tight">
-          TripWeave
-        </h1>
-      </div>
 
-      <div class="flex items-center gap-3">
-        <button
-          onclick="toggleDrawer()"
-          class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm"
-        >
-          ⭐ Saved Flights
-        </button>
-        <button
-          id="authNavBtn"
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
-        >
-          Sign In
-        </button>
+  <body>
+    <div class="page-bg"></div>
+
+    <header class="topbar">
+      <div class="brand-wrap">
+        <span class="brand-icon">🧭</span>
+        <h1>Trip-Weave</h1>
       </div>
-  </head>
-  <body class="bg-gray-50 font-sans antialiased">
-    
-    <header class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">🧬</span>
-        <h1 class="text-xl font-bold text-gray-800 tracking-tight">TripWeave</h1>
-      </div>
-      <div class="flex items-center gap-3">
-        <button id="savedFlightsToggleBtn" onclick="toggleDrawer()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
-          <i class="fa-solid fa-heart" style="color: rgb(217, 54, 98)"></i>Saved Flights
+      <div class="topbar-actions">
+        <button onclick="toggleDrawer()" class="btn btn-ghost">
+          Saved Flights
         </button>
-        <button id="authNavBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
-          Sign In
-        </button>
+        <button id="authNavBtn" class="btn btn-primary">Sign In</button>
       </div>
     </header>
 
-    <main
-      class="app-container max-w-7xl mx-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-6 h-[calc(100vh-73px)]"
-    >
-      <section
-        class="chat-panel bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden shadow-sm"
-      >
-        <header class="panel-header bg-gray-50 border-b border-gray-200 p-4">
-          <h2 class="font-bold text-gray-700 flex items-center gap-2">
-            🤖 Travel Assistant
-          </h2>
-        </header>
-
-        <div class="chat-history flex-1 p-4 overflow-y-auto space-y-4">
-          <div
-            class="message ai-message bg-blue-50 text-blue-900 max-w-[80%] p-3 rounded-2xl rounded-tl-none text-sm shadow-sm"
-          >
-            Hi! Where would you like to fly today?
+    <main class="app-shell">
+      <section class="dashboard-split">
+        <section class="dashboard-left glass-card">
+          <div class="section-header">
+            <h2>Trending destinations</h2>
           </div>
-        </div>
-
-        <div
-          class="chat-input-area p-4 border-t border-gray-200 flex gap-2 bg-gray-50"
-        >
-          <input
-            type="text"
-            placeholder="Type your message (e.g., 'London')..."
-            id="userInput"
-            class="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-          />
-          <button
-            id="sendBtn"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm"
-          >
-            Send
-          </button>
-        </div>
-      </section>
-
-      <section
-        class="results-panel bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden shadow-sm"
-      >
-        <header class="panel-header bg-gray-50 border-b border-gray-200 p-4">
-          <h2 class="font-bold text-gray-700 flex items-center gap-2">
-            ✈️ Flight Offers
-          </h2>
-        </header>
-        <div
-          id="mapContainer"
-          class="mx-4 mt-4 mb-4 rounded-xl overflow-hidden shadow-sm border border-gray-200 hidden h-64"
-        ></div>
-        <div
-          id="flightsContainer"
-          class="flights-container flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50/50"
-        >
-          <div id="skeletonView" class="text-center text-gray-400 py-16">
-            <p class="text-lg font-medium">
-              🧭 Waiting for your search query...
-            </p>
-            <p class="text-xs text-gray-400 mt-1">
-              Submit a destination in the assistant chat box to generate layout
-              results.
-            </p>
-          </div>
-        </div>
-      </section>
-    <main class="app-container max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-73px)]">
-      <section class="overflow-y-auto pr-2">
-        <h2 class="font-bold text-gray-700 mb-4">Trending destinations</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button class="destination-card p-4 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition text-left" data-prompt="Find a flight from Copenhagen to Barcelona">
-                <span class="block font-bold text-gray-900">Barcelona</span>
-                <span class="block text-xs text-gray-500">From $43 • 2h 50m</span>
+          <div class="destination-grid">
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Barcelona on 2026-11-23"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=1200&q=80&quot;);
+              "
+            >
+              <span class="city">Barcelona</span>
+              <span class="meta">Sun 23 Nov from $43</span>
+              <span class="submeta">Spain • 2h 50m avg</span>
             </button>
-            </div>
-      </section>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to London on 2026-12-31"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1400&q=80&quot;);
+              "
+            >
+              <span class="city">London</span>
+              <span class="meta">Thu 31 Dec from $53</span>
+              <span class="submeta">United Kingdom • 2h 10m avg</span>
+            </button>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Palma de Mallorca on 2026-11-05"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1613210197940-6f44d9f5f390?auto=format&fit=crop&w=900&q=80&quot;);
+              "
+            >
+              <span class="city">Palma</span>
+              <span class="meta">Thu 5 Nov from $76</span>
+              <span class="submeta">Majorca • 3h 15m avg</span>
+            </button>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Madrid on 2027-01-23"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=900&q=80&quot;);
+              "
+            >
+              <span class="city">Madrid</span>
+              <span class="meta">Sat 23 Jan from $80</span>
+              <span class="submeta">Spain • 3h 30m avg</span>
+            </button>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Paris on 2026-09-14"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80&quot;);
+              "
+            >
+              <span class="city">Paris</span>
+              <span class="meta">Mon 14 Sep from $49</span>
+              <span class="submeta">France • 2h 05m avg</span>
+            </button>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Lisbon on 2026-10-09"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1513735492246-483525079686?auto=format&fit=crop&w=1200&q=80&quot;);
+              "
+            >
+              <span class="city">Lisbon</span>
+              <span class="meta">Fri 9 Oct from $72</span>
+              <span class="submeta">Portugal • 3h 45m avg</span>
+            </button>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Rome on 2026-09-22"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1525874684015-58379d421a52?auto=format&fit=crop&w=1200&q=80&quot;);
+              "
+            >
+              <span class="city">Rome</span>
+              <span class="meta">Tue 22 Sep from $67</span>
+              <span class="submeta">Italy • 2h 45m avg</span>
+            </button>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Athens on 2026-08-17"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1555993539-1732b0258235?auto=format&fit=crop&w=1200&q=80&quot;);
+              "
+            >
+              <span class="city">Athens</span>
+              <span class="meta">Mon 17 Aug from $89</span>
+              <span class="submeta">Greece • 3h 10m avg</span>
+            </button>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Istanbul on 2026-10-20"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?auto=format&fit=crop&w=1200&q=80&quot;);
+              "
+            >
+              <span class="city">Istanbul</span>
+              <span class="meta">Tue 20 Oct from $94</span>
+              <span class="submeta">Turkey • 3h 25m avg</span>
+            </button>
+            <button
+              class="destination-card"
+              data-prompt="Find a flight from Copenhagen to Amsterdam on 2026-11-11"
+              style="
+                background-image:
+                  linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.72)),
+                  url(&quot;https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?auto=format&fit=crop&w=1200&q=80&quot;);
+              "
+            >
+              <span class="city">Amsterdam</span>
+              <span class="meta">Wed 11 Nov from $55</span>
+              <span class="submeta">Netherlands • 1h 45m avg</span>
+            </button>
+          </div>
+        </section>
 
-      <section class="flex flex-col gap-6 overflow-hidden">
-        <section class="chat-panel bg-white border border-gray-200 rounded-2xl flex flex-col flex-1 shadow-sm overflow-hidden">
-          <header class="bg-gray-50 border-b border-gray-200 p-4 font-bold text-gray-700">🤖 Travel Assistant</header>
-          <div class="chat-history flex-1 p-4 overflow-y-auto space-y-4">
-            <div class="message ai-message bg-blue-50 text-blue-900 max-w-[80%] p-3 rounded-2xl rounded-tl-none text-sm shadow-sm">
-              Hi! Where would you like to fly today?
+        <section class="dashboard-right glass-card">
+          <section class="chat-panel">
+            <header class="panel-header">
+              <h3>Travel Assistant</h3>
+            </header>
+            <div class="chat-history">
+              <div class="message ai-message">
+                Hi! Tell me where and when you want to travel, and I will find
+                flights.
+              </div>
             </div>
-          </div>
-          <div class="chat-input-area p-4 border-t border-gray-200 flex gap-2 bg-gray-50">
-            <input type="text" id="userInput" placeholder="Type your message..." class="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 text-black" />
-            <button id="sendBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm">Send</button>
-          </div>
+          </section>
+
+          <section class="results-panel">
+            <header class="panel-header">
+              <h3>Flight offers</h3>
+            </header>
+            <div id="mapContainer" class="map-frame hidden"></div>
+            <div id="flightsContainer" class="flights-container">
+              <div id="skeletonView" class="empty-state">
+                <p>Waiting for your search query...</p>
+                <small
+                  >Use the search bar below or click a trending
+                  destination.</small
+                >
+              </div>
+            </div>
+          </section>
         </section>
       </section>
     </main>
 
-    <div
-      id="authModal"
-      class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity"
-    >
-      <div
-        class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative"
-      >
-        <button
-          onclick="closeAuthModal()"
-          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-xl"
-        >
+    <section class="search-dock-wrap">
+      <div class="search-dock glass-card">
+        <input
+          type="text"
+          id="userInput"
+          placeholder="cheapest flights from New York to London"
+        />
+        <button id="sendBtn" aria-label="Search flights">Search</button>
+      </div>
+    </section>
+
+    <div id="authModal" class="modal hidden">
+      <div class="modal-card">
+        <button onclick="closeAuthModal()" class="close-btn" aria-label="Close">
           &times;
         </button>
-
-        <h2
-          id="authTitle"
-          class="text-2xl font-bold text-gray-800 mb-6 text-center"
-        >
-          Sign In
-        </h2>
-
-        <form id="authForm" onsubmit="submitAuthForm(event)" class="space-y-4">
+        <h2 id="authTitle">Sign In</h2>
+        <form id="authForm" onsubmit="submitAuthForm(event)">
           <div id="nameInputGroup" class="hidden">
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Full Name</label
-            >
+            <label>Full Name</label>
             <input
               type="text"
               id="nameInput"
               placeholder="Enter your full name"
-              class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
             />
           </div>
-
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Email Address</label
-            >
+            <label>Email Address</label>
             <input
               type="email"
               id="emailInput"
               required
               placeholder="you@example.com"
-              class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Password</label
-            >
+            <label>Password</label>
             <input
               type="password"
               id="passwordInput"
               required
-              placeholder="••••••••"
-              class="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-black"
+              placeholder="........"
             />
           </div>
-
           <button
             type="submit"
             id="authSubmitBtn"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium p-3 rounded-lg transition mt-4 shadow-sm"
+            class="btn btn-primary auth-submit"
           >
             Sign In
           </button>
         </form>
-
-        <p class="text-sm text-center text-gray-600 mt-6">
+        <p class="auth-switch-wrap">
           <button
             type="button"
             onclick="toggleAuthMode()"
             id="toggleAuthModeBtn"
-            class="text-blue-600 font-medium hover:underline"
+            class="auth-switch"
           >
             Need an account? Sign Up
           </button>
         </p>
       </div>
-    <div id="authModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center z-50 p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
-            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 font-bold text-xl">&times;</button>
-            <h2 id="authTitle" class="text-2xl font-bold mb-6 text-center">Sign In</h2>
-            <form id="authForm" class="space-y-4">
-                <div id="nameInputGroup" class="hidden">
-                    <label class="block text-sm font-medium">Full Name</label>
-                    <input type="text" id="nameInput" class="w-full border p-2.5 rounded-lg text-black" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium">Email</label>
-                    <input type="email" id="emailInput" required class="w-full border p-2.5 rounded-lg text-black" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium">Password</label>
-                    <input type="password" id="passwordInput" required class="w-full border p-2.5 rounded-lg text-black" />
-                </div>
-                <button type="submit" id="authSubmitBtn" class="w-full bg-blue-600 text-white p-3 rounded-lg font-medium">Sign In</button>
-            </form>
-            <p class="text-sm text-center mt-6">
-               <button type="button" id="toggleAuthModeBtn" class="text-blue-600 hover:underline">Need an account? Sign Up</button>
-            </p>
-        </div>
     </div>
 
-    <div id="savedFlightsDrawer" class="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl transform translate-x-full transition-transform z-40 flex flex-col border-l">
-      <div class="p-4 border-b flex justify-between items-center bg-gray-50">
-        <h2 class="font-bold">My Saved Flights</h2>
-        <button onclick="toggleDrawer()" class="text-xl font-bold">&times;</button>
+    <aside id="savedFlightsDrawer" class="saved-drawer">
+      <div class="drawer-head">
+        <h2>My Saved Offers</h2>
+        <button onclick="toggleDrawer()" class="close-btn" aria-label="Close">
+          &times;
+        </button>
       </div>
-      <div id="savedFlightsContainer" class="p-4 flex-1 overflow-y-auto"></div>
-    </div>
-    <div
-      id="toastContainer"
-      class="fixed top-5 right-5 z-[60] flex flex-col gap-3 pointer-events-none"
-    ></div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="script.js"></script>
-  </body>
+      <div id="savedFlightsContainer" class="drawer-body">
+        <p id="emptyDrawerMessage" class="empty-saved">
+          Your saved flights will appear here.
+        </p>
+      </div>
+    </aside>
 
-    <div id="toastContainer" class="fixed top-5 right-5 z-[60] flex flex-col gap-3 pointer-events-none"></div>
+    <div id="toastContainer" class="toast-container"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="script.js"></script>

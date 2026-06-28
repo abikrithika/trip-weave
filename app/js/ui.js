@@ -1,7 +1,7 @@
-import { openAuthModal, closeAuthModal, toggleAuthMode } from './auth.js';
+import { openAuthModal, closeAuthModal, toggleAuthMode } from "./auth.js";
 export function showNotification(message, type = "success") {
   const container = document.getElementById("toastContainer");
-  container.innerHTML = '';
+  container.innerHTML = "";
   const toast = document.createElement("div");
   const bgColor = type === "success" ? "bg-green-600" : "bg-red-600";
   const icon = type === "success" ? "✅" : "⚠️";
@@ -28,7 +28,7 @@ export function showNotification(message, type = "success") {
 
 export function toggleDrawer() {
   const drawer = document.getElementById("savedFlightsDrawer");
-  if (drawer) drawer.classList.toggle("translate-x-full");
+  if (drawer) drawer.classList.toggle("open");
 }
 
 window.toggleDrawer = toggleDrawer;

@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import apiRoutes from "./routers/api.js";
+import { apiErrorHandler, apiNotFoundHandler } from "./middleware/errors.js";
 import prisma from "./db/code/prisma.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,21 +17,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 1. API Routes (Must come before static/catch-all)
 app.use("/api", apiRoutes);
+app.use("/api", apiNotFoundHandler);
 
-app.use((error, req, res, next) => {
-  console.error(error);
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-  });
+// 2. Serve static files
+app.use(express.static(path.resolve(__dirname, "../../app")));
+
+// 3. Catch-all route for SPA (Single Page Application)
+app.get("*", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../../app/index.html"));
 });
 
-app.use(express.static(path.join(__dirname, "../../app")));
-
-app.get("*splat", (req, res) => {
-  res.sendFile(path.join(__dirname, "../../app/index.html"));
-});
+// 4. Global Error Handler
+app.use(apiErrorHandler);
 
 const PORT = process.env.PORT || 5050;
 

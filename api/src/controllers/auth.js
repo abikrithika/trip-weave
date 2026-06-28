@@ -8,49 +8,61 @@ export async function signUp(req, res, next) {
   try {
     const signUpValidation = signupSchema.safeParse(req.body);
     if (!signUpValidation.success) {
-      return res.status(400).json({
-        success: false,
-        errors: signUpValidation.error.flatten().fieldErrors,
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          errors: signUpValidation.error.flatten().fieldErrors,
+        });
     }
 
-    // 1. EXTRACT NAME HERE
     const { name, email, password } = signUpValidation.data;
 
     const existingUser = await prisma.user.findFirst({
-      where: {
-        email: {
-          equals: email,
-        },
-      },
+      where: { email: { equals: email } },
     });
 
     if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already exists",
-      });
+      return res
+        .status(409)
+        .json({ success: false, message: "Email already exists" });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const dkkCurrency = await prisma.currency.findUnique({
+      where: { code: "DKK" },
+    });
 
-    // 2. SAVE NAME TO DATABASE HERE
-    await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
         name,
         email,
         passwordHash: passwordHash,
+        currencyId: dkkCurrency ? dkkCurrency.id : null,
       },
+      include: { currency: true },
     });
 
     return res.status(201).json({
       success: true,
       message: "User account created successfully",
+      user: {
+        id: newUser.id.toString(), // Fixed BigInt
+        name: newUser.name,
+        email: newUser.email,
+        currency: newUser.currency ? { code: newUser.currency.code } : null,
+      },
     });
   } catch (error) {
+    if (error.code === "P2002") {
+      return res
+        .status(409)
+        .json({ success: false, message: "Email already exists" });
+    }
     next(error);
   }
 }
+
 export async function logIn(req, res, next) {
   try {
     const loginValidation = loginSchema.safeParse(req.body);
@@ -62,17 +74,17 @@ export async function logIn(req, res, next) {
     }
     const { email, password } = loginValidation.data;
     const user = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
       include: { currency: true },
     });
+
     if (!user) {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
       });
     }
+
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
@@ -81,6 +93,7 @@ export async function logIn(req, res, next) {
         message: "Invalid email or password",
       });
     }
+
     const token = jwt.sign(
       {
         userId: user.id.toString(),
@@ -96,17 +109,12 @@ export async function logIn(req, res, next) {
       success: true,
       message: "Login successful",
       token,
-
       user: {
+        id: user.id.toString(), // Fixed BigInt here as well
         name: user.name,
         email: user.email,
         currency: user.currency ? { code: user.currency.code } : null,
       },
-
-      //   userId: user.id.toString(),
-      //   user: {
-      //     email: user.email,
-      //   },
     });
   } catch (error) {
     next(error);

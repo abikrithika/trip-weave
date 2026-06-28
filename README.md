@@ -1,5 +1,7 @@
 # trip-weave
+## Project Board
 
+- Trello: https://trello.com/b/2veKRbtH/trip-weave
 ## Prerequisites
 
 Make sure you have the following installed:
@@ -39,9 +41,13 @@ Create a `.env` file in the project root.
 
 Example:
 
-PORT=5000
+PORT=5500
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/trip_weave
+GROQ_API_KEY=sk_your_actual_api_key_here
+GROQ_MODEL=openai/gpt-oss-20b
 Add any additional environment variables required by the application.
+
+If you need the Groq-specific setup details, see [api/src/groq/README.md](api/src/groq/README.md).
 
 ## Package Scripts
 
@@ -81,7 +87,7 @@ npm start
 
 When running locally:
 
-http://localhost:5000 (Replace the port if configured differently in `.env`).
+http://localhost:5500 (Replace the port if configured differently in `.env`).
 
 ## Testing AI Flight JSON Extraction
 

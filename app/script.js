@@ -18,7 +18,7 @@ export const setCurrentFlights = (val) => { currentFlights = val; };
 
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Initialize core UI
-    //updateNavUI();
+    updateNavUI();
     loadChatHistory();
 
     // 2. Chat listeners

@@ -13,7 +13,8 @@ export async function getSaved(req, res, next) {
       });
     }
 
-    const userId = typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
+    const userId =
+      typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
 
     const flights = await prisma.savedOffer.findMany({
       where: { userId },
@@ -40,7 +41,8 @@ export async function saveFlight(req, res, next) {
       });
     }
 
-    const userId = typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
+    const userId =
+      typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
 
     const validation = saveFlightSchema.safeParse(req.body);
     if (!validation.success) {
@@ -57,6 +59,8 @@ export async function saveFlight(req, res, next) {
       price,
       departure_time,
       currency_id,
+      airline_code,
+      airline_name,
     } = validation.data;
 
     const existing = await prisma.savedOffer.findFirst({
@@ -96,6 +100,8 @@ export async function saveFlight(req, res, next) {
         price,
         currencyId: currency_id ?? null,
         departureTime: new Date(departure_time),
+        airlineCode: airline_code ?? null,
+        airlineName: airline_name ?? null,
       },
     });
 
@@ -119,7 +125,8 @@ export async function removeFlight(req, res, next) {
       });
     }
 
-    const userId = typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
+    const userId =
+      typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
     const id = BigInt(req.params.id);
 
     const flight = await prisma.savedOffer.findFirst({

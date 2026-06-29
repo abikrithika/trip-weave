@@ -19,4 +19,8 @@ export const saveFlightSchema = z.object({
   }),
 
   currency_id: z.number().int().optional().nullable(),
+
+  airline_code: z.string().max(3).optional().nullable(),
+
+  airline_name: z.string().optional().nullable(),
 });

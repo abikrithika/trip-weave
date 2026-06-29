@@ -70,6 +70,8 @@ model SavedOffer {
   id            BigInt   @id @default(autoincrement())
   userId        BigInt   @map("user_id")
   flightNumber  String   @map("flight_number")
+  airlineCode   String?  @map("airline_code")
+  airlineName   String?  @map("airline_name")
   origin        String
   destination   String
   price         Decimal  @map("price") @db.Decimal(10, 2)

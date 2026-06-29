@@ -1,5 +1,6 @@
 import { appendChatMessage } from "./chat.js";
 import { showNotification } from "./ui.js";
+import { getAirlineDisplayData, getAirlineIata } from "./airline.js";
 
 const fullSchemaInstruction = `
     RETURN A VALID JSON OBJECT WITH THESE KEYS:
@@ -230,14 +231,6 @@ export async function testLiveFlightSearch(userPrompt) {
     }
   }
 }
-function getAirlineIata(flight) {
-  return (
-    flight?.owner?.iata_code ||
-    flight?.airline_iata ||
-    flight?.slices?.[0]?.segments?.[0]?.marketing_carrier?.iata_code ||
-    ""
-  ).toUpperCase();
-}
 export function renderFlightsToScreen(flightsArray) {
   const container = document.getElementById("flightsContainer");
   if (!container) return;
@@ -245,10 +238,8 @@ export function renderFlightsToScreen(flightsArray) {
   const userCurrency = localStorage.getItem("userCurrency") || "USD";
 
   flightsArray.forEach((flight) => {
-    const airlineIata = getAirlineIata(flight);
-    const logoUrl = airlineIata
-      ? `https://www.gstatic.com/flights/airline_logos/70px/${airlineIata}.png`
-      : "";
+    const airlineData = getAirlineDisplayData(flight);
+    const logoUrl = airlineData.logoUrl;
 
     const card = document.createElement("div");
     card.className =
@@ -275,7 +266,7 @@ export function renderFlightsToScreen(flightsArray) {
     route.textContent = `${flight.slices?.[0]?.origin?.iata_code || "N/A"} ➔ ${flight.slices?.[0]?.destination?.iata_code || "N/A"}`;
     const airline = document.createElement("p");
     airline.className = "text-sm text-gray-600";
-    airline.textContent = flight.owner_name || "Airline";
+    airline.textContent = airlineData.name;
     details.append(route, airline);
 
     const priceColumn = document.createElement("div");

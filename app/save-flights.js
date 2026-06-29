@@ -1,5 +1,6 @@
 import { openAuthModal } from "./js/auth.js";
 import { showNotification } from "./js/ui.js";
+import { getAirlineDisplayData } from "./js/airline.js";
 
 const SAVED_FLIGHTS_API = "http://localhost:5050/api/saved-flights";
 
@@ -96,6 +97,14 @@ function normalizeFlightForSave(flight) {
     "departure",
   ]);
 
+  const airlineCode =
+    flight?.owner?.iata_code ||
+    flight?.airline_iata ||
+    flight?.slices?.[0]?.segments?.[0]?.marketing_carrier?.iata_code ||
+    (typeof flight?.flightNumber === "string"
+      ? flight.flightNumber.match(/^[A-Za-z]{1,3}/)?.[0] || ""
+      : "");
+
   return {
     origin,
     destination,
@@ -115,6 +124,7 @@ function normalizeFlightForSave(flight) {
       firstSegment?.marketing_carrier?.name ||
       firstSegment?.operating_carrier?.name ||
       "UNKNOWN",
+    airlineCode: String(airlineCode).toUpperCase().slice(0, 3),
   };
 }
 
@@ -133,8 +143,15 @@ async function saveFlight(flight) {
     const normalizedFlight = normalizeFlightForSave(flight);
     console.log("Normalized flight payload:", normalizedFlight);
 
-    const { origin, destination, departureTime, flightNumber, price } =
-      normalizedFlight;
+    const {
+      origin,
+      destination,
+      departureTime,
+      flightNumber,
+      price,
+      airline,
+      airlineCode,
+    } = normalizedFlight;
 
     const flightData = {
       flight_number: String(flightNumber),
@@ -143,6 +160,8 @@ async function saveFlight(flight) {
       price: Math.max(0, price),
       departure_time: departureTime,
       currency_id: null,
+      airline_code: airlineCode || null,
+      airline_name: airline || null,
     };
 
     // Validate required fields
@@ -289,21 +308,28 @@ function renderSavedFlights(flights) {
   }
 
   container.innerHTML = flights
-    .map(
-      (flight) => `
+    .map((flight) => {
+      const airlineData = getAirlineDisplayData(flight);
+
+      return `
       <div class="border-b py-3">
+        <div class="flex items-start gap-3">
+          ${airlineData.logoUrl ? `<img src="${airlineData.logoUrl}" alt="${airlineData.name}" class="h-10 w-10 rounded-lg object-contain bg-gray-50 border border-gray-100" onerror="this.style.display='none'" />` : '<div class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-500">AIR</div>'}
 
-        <h4 class="font-semibold">
-          ${flight.origin} → ${flight.destination}
-        </h4>
+          <div class="flex-1">
+            <h4 class="font-semibold">
+              ${flight.origin} → ${flight.destination}
+            </h4>
 
-        <p class="text-sm text-gray-600">
-          ${flight.airline}
-        </p>
+            <p class="text-xs text-gray-500">
+              Flight ${airlineData.flightNumber}
+            </p>
 
-        <p class="font-bold text-blue-600">
-          ${flight.price}
-        </p>
+            <p class="font-bold text-blue-600 mt-1">
+              USD ${flight.price}
+            </p>
+          </div>
+        </div>
 
         <button
           onclick="deleteSavedFlight('${flight.id}')"
@@ -311,10 +337,9 @@ function renderSavedFlights(flights) {
         >
           Remove
         </button>
-
       </div>
-    `,
-    )
+    `;
+    })
     .join("");
 }
 

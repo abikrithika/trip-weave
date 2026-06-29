@@ -103,6 +103,8 @@ export async function submitAuthForm(e) {
     
     closeAuthModal();
     updateNavUI();
+    if (window.clearSavedFlights) window.clearSavedFlights();
+    if (window.loadSavedFlights) window.loadSavedFlights();
     loadChatHistory();
     
   } catch (error) {
@@ -123,6 +125,7 @@ export function updateNavUI() {
     authNavBtn.innerText = "Log Out";
     authNavBtn.onclick = () => {
       localStorage.clear();
+      if (window.clearSavedFlights) window.clearSavedFlights();
       window.location.reload();
     };
   } else {

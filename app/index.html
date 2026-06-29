@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   </head>
 
   <body>
@@ -185,6 +185,14 @@
                 flights.
               </div>
             </div>
+            <div class="search-dock glass-card">
+              <input
+                type="text"
+                id="userInput"
+                placeholder="cheapest flights from New York to London"
+              />
+              <button id="sendBtn" aria-label="Search flights">Search</button>
+            </div>
           </section>
 
           <section class="results-panel">
@@ -205,17 +213,6 @@
         </section>
       </section>
     </main>
-
-    <section class="search-dock-wrap">
-      <div class="search-dock glass-card">
-        <input
-          type="text"
-          id="userInput"
-          placeholder="cheapest flights from New York to London"
-        />
-        <button id="sendBtn" aria-label="Search flights">Search</button>
-      </div>
-    </section>
 
     <div id="authModal" class="modal hidden">
       <div class="modal-card">
@@ -288,7 +285,7 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module" src="script.js"></script>
-    <script type="module" src="save-flights.js"></script>
+    <script type="module" src="script.js?v=20260628"></script>
+    <script type="module" src="save-flights.js?v=20260628"></script>
   </body>
 </html>

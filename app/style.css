@@ -136,6 +136,7 @@ body {
   padding: 0;
   overflow: hidden;
   display: grid;
+  height: 100%;
   grid-template-rows: minmax(260px, 0.85fr) minmax(280px, 1.15fr);
 }
 
@@ -210,13 +211,16 @@ body {
 
 .chat-panel,
 .results-panel {
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   border-bottom: 1px solid var(--line);
+  min-height: 0;
 }
 
 .panel-header {
@@ -237,13 +241,30 @@ body {
 
 .chat-history {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
   padding: 16px;
 }
+.search-dock {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  border-top: 1px solid var(--line);
+  background: #fff;
+  flex-shrink: 0;
+}
 
+.search-dock button {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #245f97;
+  color: white;
+  cursor: pointer;
+}
 .message {
   max-width: 90%;
   border-radius: 14px;
@@ -335,30 +356,6 @@ body {
   padding: 7px 11px;
   cursor: pointer;
 }
-
-.search-dock-wrap {
-  position: fixed;
-  z-index: 35;
-  left: 0;
-  right: 0;
-  bottom: 14px;
-  display: flex;
-  justify-content: center;
-  padding: 0 14px;
-}
-
-.search-dock {
-  width: min(920px, 100%);
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 10px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 16px 35px rgba(16, 30, 54, 0.14);
-  animation: raiseIn 500ms ease;
-}
-
 .search-dock input {
   flex: 1;
   border: 1px solid var(--line);

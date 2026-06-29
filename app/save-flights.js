@@ -214,12 +214,23 @@ async function saveFlight(flight) {
     return false;
   }
 }
+function clearSavedFlights() {
+  const container = document.getElementById("savedFlightsContainer");
+
+  if (!container) return;
+
+  container.innerHTML = "<p class='text-gray-500'>No saved flights.</p>";
+}
+
 async function loadSavedFlights() {
   const token = localStorage.getItem("userToken");
 
   if (!token) {
+    clearSavedFlights();
     return;
   }
+
+  clearSavedFlights();
 
   try {
     const response = await fetch(`${SAVED_FLIGHTS_API}/saved`, {
@@ -228,11 +239,20 @@ async function loadSavedFlights() {
       },
     });
 
-    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearSavedFlights();
+        return;
+      }
 
+      throw new Error("Failed to load saved flights");
+    }
+
+    const data = await response.json();
     renderSavedFlights(data.flights || []);
   } catch (error) {
     console.error(error);
+    clearSavedFlights();
   }
 }
 async function deleteSavedFlight(id) {
@@ -321,3 +341,4 @@ document.addEventListener("click", async (event) => {
 
 window.deleteSavedFlight = deleteSavedFlight;
 window.loadSavedFlights = loadSavedFlights;
+window.clearSavedFlights = clearSavedFlights;

@@ -4,7 +4,16 @@ import { serialize } from "../utils/serialize.js";
 
 export async function getSaved(req, res, next) {
   try {
-    const userId = Number(req.user.userId);
+    const rawUserId = req.user?.userId;
+
+    if (rawUserId === undefined || rawUserId === null || rawUserId === "") {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const userId = typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
 
     const flights = await prisma.savedOffer.findMany({
       where: { userId },
@@ -22,7 +31,16 @@ export async function getSaved(req, res, next) {
 }
 export async function saveFlight(req, res, next) {
   try {
-    const userId = Number(req.user.userId);
+    const rawUserId = req.user?.userId;
+
+    if (rawUserId === undefined || rawUserId === null || rawUserId === "") {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const userId = typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
 
     const validation = saveFlightSchema.safeParse(req.body);
     if (!validation.success) {
@@ -92,7 +110,16 @@ export async function saveFlight(req, res, next) {
 
 export async function removeFlight(req, res, next) {
   try {
-    const userId = Number(req.user.userId);
+    const rawUserId = req.user?.userId;
+
+    if (rawUserId === undefined || rawUserId === null || rawUserId === "") {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const userId = typeof rawUserId === "bigint" ? rawUserId : BigInt(rawUserId);
     const id = BigInt(req.params.id);
 
     const flight = await prisma.savedOffer.findFirst({

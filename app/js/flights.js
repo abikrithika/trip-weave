@@ -231,15 +231,93 @@ export async function testLiveFlightSearch(userPrompt) {
     }
   }
 }
+function formatDepartureDate(departingAt) {
+  if (!departingAt) return "N/A";
+
+  return new Date(departingAt).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function calculateFlightDuration(segment) {
+  if (!segment?.departing_at || !segment?.arriving_at) {
+    return "N/A";
+  }
+
+  const departure = new Date(segment.departing_at);
+  const arrival = new Date(segment.arriving_at);
+
+  const diff = arrival - departure;
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  return `${hours}h ${minutes}m`;
+}
+
+function getBaggageInfo(flight) {
+  const baggages =
+    flight.slices?.[0]?.segments?.[0]?.passengers?.[0]?.baggages ??
+    flight.baggages ??
+    flight.baggage;
+
+  // Legacy string support
+  if (typeof baggages === "string") {
+    return {
+      carry_on: null,
+      checked: baggages,
+    };
+  }
+
+  if (!Array.isArray(baggages) || baggages.length === 0) {
+    return {
+      carry_on: null,
+      checked: null,
+      none: "No baggage included",
+    };
+  }
+
+  const carryOn = baggages.find(
+    (b) =>
+      b.type?.toLowerCase().includes("carry") ||
+      b.type?.toLowerCase().includes("cabin"),
+  );
+
+  const checked = baggages.find((b) =>
+    b.type?.toLowerCase().includes("checked"),
+  );
+
+  return {
+    carryOn: carryOn
+      ? `${carryOn.quantity} carry-on bag${carryOn.quantity > 1 ? "s" : ""}`
+      : null,
+    checked: checked
+      ? `${checked.quantity} checked bag${checked.quantity > 1 ? "s" : ""}`
+      : null,
+    none: !carryOn && !checked ? "No baggage included" : null,
+  };
+}
+function createInfoRow(text, className = "text-xs text-gray-500") {
+  const p = document.createElement("p");
+  p.className = className;
+  p.textContent = text;
+  return p;
+}
 export function renderFlightsToScreen(flightsArray) {
   const container = document.getElementById("flightsContainer");
   if (!container) return;
+
   container.innerHTML = "";
+
   const userCurrency = localStorage.getItem("userCurrency") || "USD";
 
   flightsArray.forEach((flight) => {
     const airlineData = getAirlineDisplayData(flight);
-    const logoUrl = airlineData.logoUrl;
+    const segment = flight.slices?.[0]?.segments?.[0];
 
     const card = document.createElement("div");
     card.className =
@@ -248,32 +326,78 @@ export function renderFlightsToScreen(flightsArray) {
     const wrapper = document.createElement("div");
     wrapper.className = "flex items-start gap-4";
 
-    if (logoUrl) {
+    if (airlineData.logoUrl) {
       const logo = document.createElement("img");
-      logo.src = logoUrl;
+      logo.src = airlineData.logoUrl;
       logo.className =
         "h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-100";
-      logo.onerror = () => {
-        logo.style.display = "none";
-      };
+      logo.onerror = () => (logo.style.display = "none");
+
       wrapper.appendChild(logo);
     }
 
     const details = document.createElement("div");
     details.className = "flex-1";
+
     const route = document.createElement("h3");
     route.className = "font-bold text-gray-800 text-lg";
-    route.textContent = `${flight.slices?.[0]?.origin?.iata_code || "N/A"} ➔ ${flight.slices?.[0]?.destination?.iata_code || "N/A"}`;
-    const airline = document.createElement("p");
-    airline.className = "text-sm text-gray-600";
-    airline.textContent = airlineData.name;
-    details.append(route, airline);
+    route.textContent =
+      `${flight.slices?.[0]?.origin?.iata_code ?? "N/A"} ➔ ` +
+      `${flight.slices?.[0]?.destination?.iata_code ?? "N/A"}`;
+
+    const airline = createInfoRow(airlineData.name, "text-sm text-gray-600");
+
+    const departure = createInfoRow(
+      `Departure: ${formatDepartureDate(segment?.departing_at)}`,
+      "text-sm text-gray-600",
+    );
+
+    const duration = createInfoRow(
+      `Duration: ${calculateFlightDuration(segment)}`,
+    );
+    console.log(flight.slices[0].segments[0].passengers);
+    const baggage = getBaggageInfo(flight);
+
+    const baggageRow = document.createElement("div");
+    baggageRow.className = "flex items-center gap-6 text-sm text-gray-600 mt-2";
+
+    if (baggage.none) {
+      const span = document.createElement("span");
+      span.className = "flex items-center gap-1 text-red-500";
+      span.innerHTML = `
+    <i class="fa-solid fa-ban"></i>
+    ${baggage.none}
+  `;
+      baggageRow.appendChild(span);
+    } else {
+      if (baggage.carryOn) {
+        const span = document.createElement("span");
+        span.className = "flex items-center gap-1";
+        span.innerHTML = `
+      <i class="fa-solid fa-briefcase"></i>
+      ${baggage.carryOn}
+    `;
+        baggageRow.appendChild(span);
+      }
+
+      if (baggage.checked) {
+        const span = document.createElement("span");
+        span.className = "flex items-center gap-1";
+        span.innerHTML = `
+      <i class="fa-solid fa-suitcase"></i>
+      ${baggage.checked}
+    `;
+        baggageRow.appendChild(span);
+      }
+    }
+    details.append(route, airline, departure, duration, baggageRow);
 
     const priceColumn = document.createElement("div");
     priceColumn.className = "text-right flex flex-col items-end gap-2";
+
     const price = document.createElement("p");
     price.className = "font-bold text-xl text-blue-600";
-    price.textContent = `${userCurrency} ${flight.total_amount || "0.00"}`;
+    price.textContent = `${userCurrency} ${flight.total_amount ?? "0.00"}`;
 
     const saveButton = document.createElement("button");
     saveButton.type = "button";
@@ -284,6 +408,7 @@ export function renderFlightsToScreen(flightsArray) {
     saveButton.innerHTML = '<i class="fa-regular fa-heart"></i>';
 
     priceColumn.append(price, saveButton);
+
     wrapper.append(details, priceColumn);
     card.appendChild(wrapper);
     container.appendChild(card);

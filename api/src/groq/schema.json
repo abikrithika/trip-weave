@@ -11,89 +11,22 @@
     "return_date",
     "max_price_dkk",
     "vibe_tags",
-    "filters"
+    "direct_only",
+    "preferred_airlines",
+    "baggage_required",
+    "departure_time"
   ],
   "properties": {
-    "trip_type": {
-      "type": ["string", "null"],
-      "enum": ["one_way", "return", null],
-      "description": "Whether the user wants a one-way or return trip. Use return when a return date is provided.",
-      "examples": ["one_way", "return"]
-    },
-    "origin_airport": {
-      "type": ["string", "null"],
-      "pattern": "^[A-Z]{3}$",
-      "description": "IATA airport code, uppercase 3 letters",
-      "examples": ["CPH", "LHR"]
-    },
-    "destination_airport": {
-      "type": ["string", "null"],
-      "pattern": "^[A-Z]{3}$",
-      "description": "IATA airport code, uppercase 3 letters",
-      "examples": ["LIS", "NYC"]
-    },
-    "departure_date": {
-      "type": ["string", "null"],
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-      "description": "Date in YYYY-MM-DD format",
-      "examples": ["2026-07-15"]
-    },
-    "return_date": {
-      "type": ["string", "null"],
-      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-      "description": "Optional return date in YYYY-MM-DD format for round trips",
-      "examples": ["2026-07-22"]
-    },
-    "max_price_dkk": {
-      "type": ["integer", "null"],
-      "minimum": 0,
-      "description": "Maximum price in DKK",
-      "examples": [1500]
-    },
-    "vibe_tags": {
-      "type": ["array", "null"],
-      "items": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 32
-      },
-      "minItems": 0,
-      "description": "Array of short vibe tags, e.g., ['budget','beach']",
-      "examples": [["budget", "beach"]]
-    },
-    "filters": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "direct_only",
-        "preferred_airlines",
-        "baggage_required",
-        "departure_time"
-      ],
-      "properties": {
-        "direct_only": {
-          "type": ["boolean", "null"],
-          "description": "True when the user asks for direct/non-stop flights only."
-        },
-        "preferred_airlines": {
-          "type": ["array", "null"],
-          "items": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 32
-          },
-          "description": "Airline names or IATA codes requested by the user."
-        },
-        "baggage_required": {
-          "type": ["boolean", "null"],
-          "description": "True when the user asks for baggage to be included."
-        },
-        "departure_time": {
-          "type": ["string", "null"],
-          "enum": ["morning", "afternoon", "evening", "night", null],
-          "description": "Preferred departure time window when mentioned."
-        }
-      }
-    }
+    "trip_type": { "type": ["string", "null"] },
+    "origin_airport": { "type": ["string", "null"] },
+    "destination_airport": { "type": ["string", "null"] },
+    "departure_date": { "type": ["string", "null"] },
+    "return_date": { "type": ["string", "null"] },
+    "max_price_dkk": { "type": ["integer", "null"] },
+    "vibe_tags": { "type": ["array", "null"], "items": { "type": "string" } },
+    "direct_only": { "type": ["boolean", "null"] },
+    "preferred_airlines": { "type": ["array", "null"], "items": { "type": "string" } },
+    "baggage_required": { "type": ["boolean", "null"] },
+    "departure_time": { "type": ["string", "null"] }
   }
 }

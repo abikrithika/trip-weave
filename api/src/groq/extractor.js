@@ -173,25 +173,29 @@ function normalizeFilters(value) {
 }
 
 function normalizeTripQuery(raw) {
-  const source =
-    raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
-  const returnDate =
-    source.return_date == null || source.return_date === ""
-      ? null
-      : source.return_date;
+const source = raw && typeof raw === "object" ? raw : {};
+  const tomorrow = new Date();
+
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const tomorrowDateStr = tomorrow.toISOString().split('T')[0];
 
   return {
-    trip_type: normalizeTripType(source.trip_type, returnDate),
-    origin_airport: normalizeIataCode(source.origin_airport),
-    destination_airport: normalizeIataCode(source.destination_airport),
-    departure_date:
-      source.departure_date == null || source.departure_date === ""
-        ? null
-        : source.departure_date,
-    return_date: returnDate,
-    max_price_dkk: normalizeMaxPriceDkk(source.max_price_dkk),
-    vibe_tags: normalizeVibeTags(source.vibe_tags),
-    filters: normalizeFilters(source.filters),
+
+  origin_airport: normalizeIataCode(source.origin_airport) || null,
+    destination_airport: normalizeIataCode(source.destination_airport) || null,
+
+    departure_date: source.departure_date || null,
+    
+    trip_type: normalizeTripType(source.trip_type, source.return_date),
+    return_date: source.return_date || null,
+    max_price_dkk: source.max_price_dkk || null,
+    vibe_tags: source.vibe_tags || [],
+    // Flattened filter keys matching the new schema
+    direct_only: normalizeBoolean(source.direct_only),
+    preferred_airlines: normalizePreferredAirlines(source.preferred_airlines),
+    baggage_required: normalizeBoolean(source.baggage_required),
+    departure_time: normalizeDepartureTime(source.departure_time)
   };
 }
 
@@ -214,7 +218,7 @@ function isRealDateString(value) {
 function verifyTripQuery(query) {
   const errors = [];
 
-  if (!query.origin_airport) {
+  /*if (!query.origin_airport) {
     errors.push("missing_origin_airport");
   }
   if (!query.destination_airport) {
@@ -239,7 +243,7 @@ function verifyTripQuery(query) {
     query.return_date < query.departure_date
   ) {
     errors.push("return_date_before_departure_date");
-  }
+  }*/
 
   return errors;
 }
@@ -325,17 +329,18 @@ async function extractTripQuery(userText, opts = {}) {
 
   parsed = normalizeTripQuery(parsed);
 
-  // Validate against schema
-  const valid = validate(parsed);
-  if (!valid) {
-    result.errors.push(
-      ...(validate.errors || []).map((e) => `${e.instancePath} ${e.message}`),
-    );
-    result.parsed = parsed;
-    return result;
-  }
+parsed.trip_type = normalizeTripType(parsed.trip_type, parsed.return_date);
+  parsed.vibe_tags = parsed.vibe_tags || [];
+  parsed.max_price_dkk = parsed.max_price_dkk || null;
+  parsed.return_date = parsed.return_date || null;
+  parsed.departure_date = parsed.departure_date || null;
 
-  const verificationErrors = verifyTripQuery(parsed);
+parsed.direct_only = parsed.direct_only ?? null;
+  parsed.preferred_airlines = parsed.preferred_airlines || [];
+  parsed.baggage_required = parsed.baggage_required ?? null;
+  parsed.departure_time = parsed.departure_time || null;
+
+ const verificationErrors = verifyTripQuery(parsed);
   if (verificationErrors.length > 0) {
     result.errors.push(...verificationErrors);
     result.parsed = parsed;
@@ -353,3 +358,4 @@ export {
   isRealDateString,
   verifyTripQuery,
 };
+//End of file

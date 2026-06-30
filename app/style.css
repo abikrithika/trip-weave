@@ -301,7 +301,38 @@ body {
   overflow-y: auto;
   padding: 16px;
 }
+/*Pagination Logic*/
+#paginationContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
 
+#paginationContainer a {
+  text-decoration: none;
+  color: #2563eb;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+#paginationContainer a:hover {
+  text-decoration: underline;
+}
+
+#paginationContainer .active {
+  background: #2563eb;
+  color: white;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .empty-state {
   border: 1px dashed #bfcbde;
   border-radius: 14px;

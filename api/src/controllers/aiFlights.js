@@ -28,22 +28,78 @@ function buildDuffelSearchPayload(tripQuery) {
 }
 
 export const aiFlightSearchController = async (req, res, next) => {
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit = Math.max(parseInt(req.query.limit) || 7, 1);
   console.log("--- DEBUG: RECEIVED PAYLOAD ---");
   console.log(JSON.stringify(req.body, null, 2));
-if (req.body.slices) {
+  if (req.body.slices) {
     try {
       if (!req.body.slices[0].origin) {
         req.body.slices[0].origin = await detectFallbackOrigin(req);
       }
+      // const flights = await searchFlights(req.body);
+      // console.log(JSON.stringify(flights, null, 2));
+      // const offers = flights.data?.offers || [];
+      // //console.log("offers", offers.length);
+      // const start = (page - 1) * limit;
+      // const end = start + limit;
+
+      // const paginatedOffers = offers.slice(start, end);
+      // return res.status(200).json({
+      //   success: true,
+      //   query: extracted.parsed,
+      //   duffelPayload,
+
+      //   pagination: {
+      //     page,
+      //     limit,
+      //     totalOffers: offers.length,
+      //     totalPages: Math.ceil(offers.length / limit),
+      //     hasNextPage: end < offers.length,
+      //     hasPreviousPage: page > 1,
+      //   },
+
+      //   data: {
+      //     ...flights.data,
+      //     offers: paginatedOffers,
+      //   },
+      // });
       const flights = await searchFlights(req.body);
-      return res.status(200).json({ success: true, data: flights });
-    } catch (error) { return next(error); }
+
+      const offers = flights.data?.data?.offers || flights.data?.offers || [];
+
+      const start = (page - 1) * limit;
+      const end = start + limit;
+
+      const paginatedOffers = offers.slice(start, end);
+      const totalPages = Math.ceil(offers.length / limit);
+      return res.status(200).json({
+        success: true,
+
+        pagination: {
+          page,
+          limit,
+          totalOffers: offers.length,
+          totalPages,
+          hasNextPage: end < offers.length,
+          hasPreviousPage: page > 1,
+        },
+
+        data: {
+          offers: paginatedOffers,
+        },
+      });
+    } catch (error) {
+      return next(error);
+    }
   }
 
-const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
+  const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
 
- if (typeof userText !== "string" || userText.trim() === "") {
-    return res.status(400).json({ success: false, message: "Missing request data." });
+  if (typeof userText !== "string" || userText.trim() === "") {
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing request data." });
   }
 
   try {

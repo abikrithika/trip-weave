@@ -2,17 +2,16 @@ import { showNotification } from './ui.js';
 
 export async function loadChatHistory() {
   const token = localStorage.getItem("userToken");
+  const chatHistory = document.querySelector(".chat-history");
+  if (!chatHistory) return;
 
-  // If it is a guest user, just render the greeting and stop!
   if (!token) {
-    const chatHistory = document.querySelector(".chat-history");
-    if (chatHistory) chatHistory.innerHTML = ""; 
+    chatHistory.innerHTML = ""; 
     appendChatMessage("Hi! Where would you like to fly today?", "ai", false);
     return; 
   }
 
   try {
-    // 1. Ask the backend for THIS user's specific conversation ID
     const convRes = await fetch(`http://localhost:5050/api/conversations/current`, {
       headers: { "Authorization": `Bearer ${token}` }
     });
@@ -20,11 +19,8 @@ export async function loadChatHistory() {
     
     const convData = await convRes.json();
     const conversationId = convData.id;
-    
-    // Save their real ID to localStorage so saveMessageToDB() uses it!
     localStorage.setItem("conversationId", conversationId); 
 
-    // 2. Now fetch the messages using their REAL ID
     const response = await fetch(`http://localhost:5050/api/conversations/${conversationId}/messages`, {
       headers: { "Authorization": `Bearer ${token}` }
     });
@@ -32,13 +28,16 @@ export async function loadChatHistory() {
     if (!response.ok) return;
 
     const messages = await response.json();
-    const chatHistory = document.querySelector(".chat-history");
-    if (chatHistory) chatHistory.innerHTML = ""; 
+    chatHistory.innerHTML = ""; // Clear only once
 
-    appendChatMessage("Hi! Where would you like to fly today?", "ai", false);
+    // ONLY show the greeting if there is absolutely no history
+    if (messages.length === 0) {
+      appendChatMessage("Hi! Where would you like to fly today?", "ai", false);
+    }
 
-    // 3. Render their private history
+    // 3. Render private history
     messages.forEach(msg => {
+      // Ensure the role matches your DB/UI expected format
       const uiRole = msg.senderRole === "user" ? "user" : "ai";
       appendChatMessage(msg.textContent, uiRole, false); 
     });

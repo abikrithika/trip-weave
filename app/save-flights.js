@@ -130,6 +130,7 @@ function normalizeFlightForSave(flight) {
 
 async function saveFlight(flight) {
   const token = localStorage.getItem("userToken");
+  const currencyId = localStorage.getItem("userCurrency") === "DKK" ? 1 : 1;
 
   if (!token) {
     openAuthModal();
@@ -153,16 +154,16 @@ async function saveFlight(flight) {
       airlineCode,
     } = normalizedFlight;
 
-    const flightData = {
-      flight_number: String(flightNumber),
-      origin,
-      destination,
-      price: Math.max(0, price),
-      departure_time: departureTime,
-      currency_id: null,
-      airline_code: airlineCode || null,
-      airline_name: airline || null,
-    };
+   const flightData = {
+  flight_number: String(flightNumber),
+  origin,
+  destination,
+  price: Math.max(0, price),
+  departure_time: departureTime,
+  currencyId: parseInt(currencyId), // Change from currency_id to currencyId
+  airline_code: airlineCode || null,
+  airline_name: airline || null,
+};
 
     // Validate required fields
     if (!origin || origin.length !== 3) {
@@ -276,7 +277,7 @@ async function loadSavedFlights() {
 }
 async function deleteSavedFlight(id) {
   const token = localStorage.getItem("userToken");
-
+console.log("Attempting to delete flight with ID:", id);
   try {
     const response = await fetch(`${SAVED_FLIGHTS_API}/save/${id}`, {
       method: "DELETE",
@@ -331,12 +332,13 @@ function renderSavedFlights(flights) {
           </div>
         </div>
 
-        <button
-          onclick="deleteSavedFlight('${flight.id}')"
-          class="text-red-500 text-sm mt-2"
-        >
-          Remove
-        </button>
+       <button
+  data-id="${flight.id}"
+  data-flight-number="${flight.flight_number}"
+  class="remove-saved-flight text-red-500 text-sm mt-2"
+>
+  Remove
+</button>
       </div>
     `;
     })
@@ -344,22 +346,54 @@ function renderSavedFlights(flights) {
 }
 
 document.addEventListener("click", async (event) => {
-  const button = event.target.closest(".save-flight-btn");
+  // 1. Handle the Heart Button (Save/Unsave)
+  const saveBtn = event.target.closest(".save-flight-btn");
+  if (saveBtn) {
+    const flight = JSON.parse(saveBtn.dataset.flight || "{}");
+    if (!flight || Object.keys(flight).length === 0) return;
 
-  if (!button) return;
+    const isCurrentlySaved = saveBtn.classList.contains("text-red-500");
 
-  const flight = JSON.parse(button.dataset.flight || "{}");
-
-  if (!flight || Object.keys(flight).length === 0) {
-    showNotification("Unable to save this flight right now.", "error");
+    if (isCurrentlySaved) {
+      // Logic for Unsaving
+      const savedFlight = window.savedFlightsCache.find(f => String(f.flight_number) === String(flight.flight_number));
+      if (savedFlight) {
+        await deleteSavedFlight(savedFlight.id);
+        // Update this button
+        saveBtn.classList.remove("text-red-500");
+        saveBtn.classList.add("text-gray-500");
+        saveBtn.innerHTML = '<i class="fa-regular fa-heart"></i>';
+        // Sync other buttons
+        updateHeartIcon(flight.flight_number, false);
+        window.savedFlightsCache = window.savedFlightsCache.filter(f => f.id !== savedFlight.id);
+        loadSavedFlights();
+      }
+    } else {
+      // Logic for Saving
+      const saved = await saveFlight(flight);
+      if (saved) {
+        // Update this button
+        saveBtn.classList.add("text-red-500");
+        saveBtn.classList.remove("text-gray-500");
+        saveBtn.innerHTML = '<i class="fa-solid fa-heart"></i>';
+        // Sync other buttons
+        updateHeartIcon(flight.flight_number, true);
+        loadSavedFlights();
+      }
+    }
     return;
   }
 
-  const saved = await saveFlight(flight);
+  // 2. Handle the Drawer Remove Button
+  const removeBtn = event.target.closest(".remove-saved-flight");
+  if (removeBtn) {
+    const id = removeBtn.dataset.id;
+    const flightNumber = removeBtn.dataset.flightNumber;
 
-  if (saved) {
-    button.innerHTML = '<i class="fa-solid fa-heart text-red-500"></i>';
-    button.disabled = true;
+    await deleteSavedFlight(id);
+    // Sync heart icons to grey
+    updateHeartIcon(flightNumber, false);
+    window.savedFlightsCache = window.savedFlightsCache.filter(f => f.id !== id);
     loadSavedFlights();
   }
 });
@@ -367,3 +401,17 @@ document.addEventListener("click", async (event) => {
 window.deleteSavedFlight = deleteSavedFlight;
 window.loadSavedFlights = loadSavedFlights;
 window.clearSavedFlights = clearSavedFlights;
+
+function updateHeartIcon(flightNumber, isSaved) {
+  const buttons = document.querySelectorAll(`.save-flight-btn[data-flight*='"${flightNumber}"']`);
+  buttons.forEach(btn => {
+    if (isSaved) {
+      btn.classList.add("text-red-500");
+      btn.classList.remove("text-gray-500");
+      btn.innerHTML = '<i class="fa-solid fa-heart"></i>';
+    } else {
+      btn.classList.remove("text-red-500");
+      btn.classList.add("text-gray-500");
+      btn.innerHTML = '<i class="fa-regular fa-heart"></i>';
+    }
+  });}

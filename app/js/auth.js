@@ -38,11 +38,10 @@ export function toggleAuthMode() {
 }
 
 export async function submitAuthForm(e) {
-   const submitBtn = document.getElementById("authSubmitBtn");
-   if (submitBtn.disabled) return;
+  const submitBtn = document.getElementById("authSubmitBtn");
+  if (submitBtn.disabled) return;
   e.preventDefault();
- 
-  
+
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.innerText = "Processing...";
@@ -59,13 +58,13 @@ export async function submitAuthForm(e) {
     if (!passwordRegex.test(password)) {
       showNotification(
         "Password must be at least 8 characters long, contain at least one letter and one number.",
-        "error",
+        "error"
       );
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerText = "Create Account";
       }
-      return; 
+      return;
     }
   }
 
@@ -81,32 +80,31 @@ export async function submitAuthForm(e) {
     });
 
     const data = await response.json();
-
     if (!response.ok) throw new Error(data.message || "Authentication failed");
 
-    // Success! Save token and force a clean conversation slate
-    localStorage.setItem("userToken", data.token);
-    localStorage.removeItem("conversationId");
+    // --- FIXED LOGIC ---
+    if (data.token) {
+      // Success: Save token and force a clean conversation slate
+      localStorage.setItem("userToken", data.token);
+      localStorage.removeItem("conversationId");
 
-    // Save the currency
-    if (data.user && data.user.currency) {
-      localStorage.setItem("userCurrency", data.user.currency.code);
+      // Save the currency
+      localStorage.setItem("userCurrency", data.user?.currency?.code || "USD");
+
+      showNotification(isLoginMode ? "Login successful!" : "Registration successful!", "success");
+      
+      closeAuthModal();
+      updateNavUI();
+      if (window.clearSavedFlights) window.clearSavedFlights();
+      if (window.loadSavedFlights) window.loadSavedFlights();
+      loadChatHistory();
     } else {
-      localStorage.setItem("userCurrency", "USD");
+      // Signup successful but no token returned: Prompt user to login
+      showNotification("Account created! Please sign in to continue.", "success");
+      toggleAuthMode();
     }
+    // --- END FIXED LOGIC ---
 
-    // Correctly show notification based on mode
-    showNotification(
-      isLoginMode ? "Login successful!" : "Registration successful!",
-      "success"
-    );
-    
-    closeAuthModal();
-    updateNavUI();
-    if (window.clearSavedFlights) window.clearSavedFlights();
-    if (window.loadSavedFlights) window.loadSavedFlights();
-    loadChatHistory();
-    
   } catch (error) {
     console.error("Auth Error:", error);
     showNotification(error.message, "error");
@@ -117,7 +115,6 @@ export async function submitAuthForm(e) {
     }
   }
 }
-
 export function updateNavUI() {
   const authNavBtn = document.getElementById("authNavBtn");
   const token = localStorage.getItem("userToken");

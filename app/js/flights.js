@@ -1,327 +1,62 @@
 import { appendChatMessage } from "./chat.js";
 import { showNotification } from "./ui.js";
-import { getAirlineDisplayData, getAirlineIata } from "./airline.js";
+import { getAirlineDisplayData } from "./airline.js";
 
-const fullSchemaInstruction = `
-    RETURN A VALID JSON OBJECT WITH THESE KEYS:
-    "origin_airport", "destination_airport", "departure_date", "trip_type", "return_date", "max_price_dkk", "vibe_tags", "filters".
-    
-    RULES:
-    1. Assume the year is 2026.
-    2. Convert countries/cities to 3-letter IATA codes (e.g., India -> DEL).
-    3. STRICTLY format "departure_date" as YYYY-MM-DD (e.g., 2026-12-06). 
-    4. If the user input is ambiguous, infer the most logical upcoming date.
-    5. If any field is missing, use NULL.
-`;
+// Global cache for toggling hearts
+window.savedFlightsCache = [];
+
+const fullSchemaInstruction = `RETURN A VALID JSON OBJECT WITH THESE KEYS: "origin_airport", "destination_airport", "departure_date", "trip_type", "return_date", "max_price_dkk", "vibe_tags", "filters". RULES: 1. Assume the year is 2026. 2. Convert countries/cities to 3-letter IATA codes. 3. STRICTLY format "departure_date" as YYYY-MM-DD. 4. If any field is missing, use NULL.`;
 
 let flightContext = "";
 
-export async function testLiveFlightSearch(userPrompt) {
-  if (!navigator.onLine) {
-    showNotification("You are currently offline!", "error");
-    return;
-  }
-
-  const container = document.getElementById("flightsContainer");
-  if (container) {
-    container.innerHTML =
-      '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium animate-pulse">Searching global flights...</p></div>';
-  }
-
-  const formattedUserPrompt = userPrompt.trim();
-  const lowerPrompt = formattedUserPrompt.toLowerCase();
-
-  // 1. Preserve state
-  let currentSearchData = {};
-  try {
-    currentSearchData = flightContext ? JSON.parse(flightContext) : {};
-  } catch (e) {
-    currentSearchData = {};
-  }
-
-  // 2. Only wipe if a brand new search intent is detected
-  const isNewSearch =
-    lowerPrompt.includes("fly to") || lowerPrompt.includes("flight");
-  if (isNewSearch) {
-    flightContext = "";
-    currentSearchData = {};
-  }
-
-  // 3. Prompt uses preserved info
-  const promptToSend = `Current known flight info: ${JSON.stringify(currentSearchData)}. User update: "${formattedUserPrompt}". Merge these to extract full flight details. ${fullSchemaInstruction.replace(/\n/g, " ")}`;
-
-  try {
-    const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptToSend }),
-    });
-    if (!groqResponse.ok) {
-      // This will now trigger your catch block
-      throw new Error("422");
-    }
-    const groqData = await groqResponse.json();
-    const extracted = groqData.data || {};
-
-    // --- NEW: FORCE NULL IF DATE IS NOT EXPLICITLY IN PROMPT ---
-    // Check if the user prompt actually contains numbers/date words
-    const dateKeywords = [
-      "jan",
-      "feb",
-      "mar",
-      "apr",
-      "may",
-      "jun",
-      "jul",
-      "aug",
-      "sep",
-      "oct",
-      "nov",
-      "dec",
-      "2026",
-      "2027",
-      "tomorrow",
-      "next",
-    ];
-    const hasDateInPrompt =
-      dateKeywords.some((word) => lowerPrompt.includes(word)) ||
-      /\d+/.test(formattedUserPrompt);
-
-    if (!hasDateInPrompt) {
-      extracted.departure_date = null;
-    }
-
-    // Merge new data with old data so we don't lose the destination!
-    const mergedData = { ...currentSearchData, ...extracted };
-    flightContext = JSON.stringify(mergedData);
-
-    const hasMeaningfulData =
-      mergedData.destination_airport || mergedData.departure_date;
-
-    if (!hasMeaningfulData && isNewSearch === false) {
-      appendChatMessage(
-        "I'm sorry, I didn't quite catch that. Could you tell me where you'd like to fly?",
-        "ai",
-        true,
-      );
-      return;
-    }
-
-    flightContext = JSON.stringify(mergedData);
-
-    if (
-      mergedData.departure_date &&
-      !/^\d{4}-\d{2}-\d{2}$/.test(mergedData.departure_date)
-    ) {
-      appendChatMessage(
-        "I understood the date, but it seems to be in an unusual format. Could you try 'YYYY-MM-DD'?",
-        "ai",
-        true,
-      );
-      return;
-    }
-
-    // --- GUARD CLAUSES ---
-    // 1. Check if we have the destination
-    if (!mergedData.destination_airport) {
-      appendChatMessage(
-        "I'm not sure which city you want to visit. Could you be more specific?",
-        "ai",
-        true,
-      );
-      return;
-    }
-
-    // 2. Check if we have the date
-    if (!mergedData.departure_date) {
-      appendChatMessage(
-        "I've got the destination, but when are you planning to fly?",
-        "ai",
-        true,
-      );
-      if (container)
-        container.innerHTML =
-          '<div class="text-center text-gray-500 py-8">Waiting for travel date...</div>';
-      return;
-    }
-
-    // 3. Validate the date (Past check)
-    const today = new Date("2026-06-26");
-    const depDate = new Date(mergedData.departure_date);
-    if (depDate < today) {
-      mergedData.departure_date = null;
-      flightContext = JSON.stringify(mergedData);
-
-      appendChatMessage(
-        "That date has already passed. Please provide a future date.",
-        "ai",
-        true,
-      );
-      return;
-    }
-
-    // 4. If we reach here, we have everything! Now we search.
-    console.log("3. Fetching live flights through AI flight search...");
-    const payload = {
-      slices: [
-        {
-          origin: mergedData.origin_airport || undefined,
-          destination: mergedData.destination_airport,
-          departure_date: mergedData.departure_date,
-        },
-      ],
-      passengers: [{ type: "adult" }],
-      cabin_class: "economy",
-    };
-
-    const flightResponse = await fetch(
-      "http://localhost:5050/api/flights/ai-search",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      },
-    );
-    const flightData = await flightResponse.json();
-
-    if (!flightResponse.ok || !flightData.data) {
-      throw new Error("Flight system error");
-    }
-
-    if (flightData.data.data?.offers?.length > 0) {
-      flightContext = ""; // Clear on success
-      renderFlightsToScreen(flightData.data.data.offers);
-      updateMap(`${mergedData.destination_airport} Airport`);
-    } else {
-      appendChatMessage(
-        "I couldn't find any flights for that date. Try another?",
-        "ai",
-        true,
-      );
-      if (container) container.innerHTML = "";
-    }
-  } catch (error) {
-    console.error("🚨 Search Error:", error);
-
-    // 1. Clear the UI completely so no "Waiting" messages persist
-    if (container) container.innerHTML = "";
-
-    // 2. Check for Rate Limit or Server connection issues
-    if (
-      error.message.includes("422") ||
-      error.message.includes("Flight system error") ||
-      error.message.includes("Failed to fetch")
-    ) {
-      appendChatMessage(
-        "I'm currently experiencing high traffic and cannot connect to my flight database. Please wait a few minutes before trying again.",
-        "ai",
-        true,
-      );
-      return; // Stops the function here
-    }
-
-    // 3. Otherwise, handle standard processing errors
-    else {
-      appendChatMessage(
-        "I couldn't process that request. Could you try phrasing it differently?",
-        "ai",
-        true,
-      );
-      return; // Stops the function here
-    }
-  }
-}
+// --- HELPER FUNCTIONS ---
 function formatDepartureDate(departingAt) {
   if (!departingAt) return "N/A";
-
-  return new Date(departingAt).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(departingAt).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function calculateFlightDuration(segment) {
-  if (!segment?.departing_at || !segment?.arriving_at) {
-    return "N/A";
-  }
-
-  const departure = new Date(segment.departing_at);
-  const arrival = new Date(segment.arriving_at);
-
-  const diff = arrival - departure;
-
+  if (!segment?.departing_at || !segment?.arriving_at) return "N/A";
+  const diff = new Date(segment.arriving_at) - new Date(segment.departing_at);
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
   return `${hours}h ${minutes}m`;
 }
 
 function getBaggageInfo(flight) {
-  const baggages =
-    flight.slices?.[0]?.segments?.[0]?.passengers?.[0]?.baggages ??
-    flight.baggages ??
-    flight.baggage;
-
-  // Legacy string support
-  if (typeof baggages === "string") {
-    return {
-      carry_on: null,
-      checked: baggages,
-    };
-  }
-
-  if (!Array.isArray(baggages) || baggages.length === 0) {
-    return {
-      carry_on: null,
-      checked: null,
-      none: "No baggage included",
-    };
-  }
-
-  const carryOn = baggages.find(
-    (b) =>
-      b.type?.toLowerCase().includes("carry") ||
-      b.type?.toLowerCase().includes("cabin"),
-  );
-
-  const checked = baggages.find((b) =>
-    b.type?.toLowerCase().includes("checked"),
-  );
-
-  return {
-    carryOn: carryOn
-      ? `${carryOn.quantity} carry-on bag${carryOn.quantity > 1 ? "s" : ""}`
-      : null,
-    checked: checked
-      ? `${checked.quantity} checked bag${checked.quantity > 1 ? "s" : ""}`
-      : null,
-    none: !carryOn && !checked ? "No baggage included" : null,
-  };
+  const baggages = flight.slices?.[0]?.segments?.[0]?.passengers?.[0]?.baggages ?? flight.baggages ?? flight.baggage;
+  if (!Array.isArray(baggages) || baggages.length === 0) return { none: "No baggage included" };
+  const carryOn = baggages.find(b => b.type?.toLowerCase().includes("carry") || b.type?.toLowerCase().includes("cabin"));
+  const checked = baggages.find(b => b.type?.toLowerCase().includes("checked"));
+  return { carryOn: carryOn ? `${carryOn.quantity} carry-on bag` : null, checked: checked ? `${checked.quantity} checked bag` : null, none: !carryOn && !checked ? "No baggage included" : null };
 }
+
 function createInfoRow(text, className = "text-xs text-gray-500") {
   const p = document.createElement("p");
   p.className = className;
   p.textContent = text;
   return p;
 }
-export function renderFlightsToScreen(flightsArray) {
+
+// --- RENDER FUNCTION ---
+export function renderFlightsToScreen(flightsArray, showAll = false) {
   const container = document.getElementById("flightsContainer");
   if (!container) return;
 
   container.innerHTML = "";
-
   const userCurrency = localStorage.getItem("userCurrency") || "USD";
 
-  flightsArray.forEach((flight) => {
+  const limit = 2;
+  const displayFlights = showAll ? flightsArray : flightsArray.slice(0, limit);
+
+  displayFlights.forEach((flight) => {
     const airlineData = getAirlineDisplayData(flight);
     const segment = flight.slices?.[0]?.segments?.[0];
+    const baggage = getBaggageInfo(flight);
+    const isSaved = window.savedFlightsCache?.some(f => f.flightNumber === flight.flight_number);
 
     const card = document.createElement("div");
-    card.className =
-      "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-3";
+    card.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-3";
 
     const wrapper = document.createElement("div");
     wrapper.className = "flex items-start gap-4";
@@ -329,98 +64,123 @@ export function renderFlightsToScreen(flightsArray) {
     if (airlineData.logoUrl) {
       const logo = document.createElement("img");
       logo.src = airlineData.logoUrl;
-      logo.className =
-        "h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-100";
+      logo.className = "h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-100";
       logo.onerror = () => (logo.style.display = "none");
-
       wrapper.appendChild(logo);
     }
 
     const details = document.createElement("div");
     details.className = "flex-1";
-
-    const route = document.createElement("h3");
-    route.className = "font-bold text-gray-800 text-lg";
-    route.textContent =
-      `${flight.slices?.[0]?.origin?.iata_code ?? "N/A"} ➔ ` +
-      `${flight.slices?.[0]?.destination?.iata_code ?? "N/A"}`;
-
-    const airline = createInfoRow(airlineData.name, "text-sm text-gray-600");
-
-    const departure = createInfoRow(
-      `Departure: ${formatDepartureDate(segment?.departing_at)}`,
-      "text-sm text-gray-600",
+    details.append(
+      Object.assign(document.createElement("h3"), { className: "font-bold text-gray-800 text-lg", textContent: `${flight.slices?.[0]?.origin?.iata_code ?? "N/A"} ➔ ${flight.slices?.[0]?.destination?.iata_code ?? "N/A"}` }),
+      createInfoRow(airlineData.name, "text-sm text-gray-600"),
+      createInfoRow(`Departure: ${formatDepartureDate(segment?.departing_at)}`, "text-sm text-gray-600"),
+      createInfoRow(`Duration: ${calculateFlightDuration(segment)}`)
     );
-
-    const duration = createInfoRow(
-      `Duration: ${calculateFlightDuration(segment)}`,
-    );
-    console.log(flight.slices[0].segments[0].passengers);
-    const baggage = getBaggageInfo(flight);
 
     const baggageRow = document.createElement("div");
     baggageRow.className = "flex items-center gap-6 text-sm text-gray-600 mt-2";
-
-    if (baggage.none) {
-      const span = document.createElement("span");
-      span.className = "flex items-center gap-1 text-red-500";
-      span.innerHTML = `
-    <i class="fa-solid fa-ban"></i>
-    ${baggage.none}
-  `;
-      baggageRow.appendChild(span);
-    } else {
-      if (baggage.carryOn) {
-        const span = document.createElement("span");
-        span.className = "flex items-center gap-1";
-        span.innerHTML = `
-      <i class="fa-solid fa-briefcase"></i>
-      ${baggage.carryOn}
-    `;
-        baggageRow.appendChild(span);
-      }
-
-      if (baggage.checked) {
-        const span = document.createElement("span");
-        span.className = "flex items-center gap-1";
-        span.innerHTML = `
-      <i class="fa-solid fa-suitcase"></i>
-      ${baggage.checked}
-    `;
-        baggageRow.appendChild(span);
-      }
+    if (baggage.none) baggageRow.innerHTML = `<span class="flex items-center gap-1 text-red-500"><i class="fa-solid fa-ban"></i> ${baggage.none}</span>`;
+    else {
+      if (baggage.carryOn) baggageRow.innerHTML += `<span class="flex items-center gap-1"><i class="fa-solid fa-briefcase"></i> ${baggage.carryOn}</span>`;
+      if (baggage.checked) baggageRow.innerHTML += `<span class="flex items-center gap-1"><i class="fa-solid fa-suitcase"></i> ${baggage.checked}</span>`;
     }
-    details.append(route, airline, departure, duration, baggageRow);
+    details.appendChild(baggageRow);
 
     const priceColumn = document.createElement("div");
     priceColumn.className = "text-right flex flex-col items-end gap-2";
-
-    const price = document.createElement("p");
-    price.className = "font-bold text-xl text-blue-600";
-    price.textContent = `${userCurrency} ${flight.total_amount ?? "0.00"}`;
-
     const saveButton = document.createElement("button");
-    saveButton.type = "button";
-    saveButton.className =
-      "save-flight-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50";
+    saveButton.className = `save-flight-btn ${isSaved ? 'text-red-500' : 'text-gray-500'}`;
     saveButton.dataset.flight = JSON.stringify(flight);
-    saveButton.setAttribute("aria-label", "Save flight");
-    saveButton.innerHTML = '<i class="fa-regular fa-heart"></i>';
-
-    priceColumn.append(price, saveButton);
+    saveButton.innerHTML = `<i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
+    
+    priceColumn.append(
+        Object.assign(document.createElement("p"), { className: "font-bold text-xl text-blue-600", textContent: `${userCurrency} ${flight.total_amount ?? "0.00"}` }),
+        saveButton
+    );
 
     wrapper.append(details, priceColumn);
     card.appendChild(wrapper);
     container.appendChild(card);
   });
+
+  if (!showAll && flightsArray.length > limit) {
+    const btn = document.createElement("button");
+    btn.textContent = "View more flights...";
+    btn.className = "text-blue-600 text-sm font-semibold w-full py-2 hover:underline mt-2";
+    btn.onclick = () => renderFlightsToScreen(flightsArray, true);
+    container.appendChild(btn);
+  }
+}
+// --- CORE SEARCH LOGIC ---
+export async function testLiveFlightSearch(userPrompt) {
+  const container = document.getElementById("flightsContainer");
+  if (container) {
+    container.innerHTML = '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium animate-pulse">Searching global flights...</p></div>';
+  }
+
+  try {
+    // 1. Fetch extracted data from Groq
+    const promptToSend = `Extract flight info from: "${userPrompt}". Current year 2026. Return JSON with: origin_airport, destination_airport, departure_date.`;
+    const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: promptToSend }),
+    });
+    const groqData = await groqResponse.json();
+    const extracted = groqData.data || {};
+
+    if (!extracted.destination_airport) {
+      appendChatMessage("I'm not sure which city you want to visit. Could you be more specific?", "ai", true);
+      if (container) container.innerHTML = "";
+      return;
+    }
+
+    // 2. Prepare payload with required fields
+    const payload = {
+      slices: [
+        {
+          origin: extracted.origin_airport || "CPH",
+          destination: extracted.destination_airport,
+          departure_date: extracted.departure_date || "2026-12-01",
+        },
+      ],
+      passengers: [{ type: "adult" }],
+      cabin_class: "economy",
+    };
+
+    // 3. Search flights
+    const flightResponse = await fetch("http://localhost:5050/api/flights/ai-search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const flightData = await flightResponse.json();
+
+    if (flightData.data?.data?.offers) {
+      renderFlightsToScreen(flightData.data.data.offers, false);
+      updateMap(`${extracted.destination_airport} Airport`);
+    } else {
+      if (container) container.innerHTML = '<p class="text-center py-8">No flights found.</p>';
+    }
+  } catch (error) {
+    console.error("Search Error:", error);
+    if (container) container.innerHTML = '<p class="text-center py-8 text-red-500">Error searching flights.</p>';
+  }
 }
 
 export function updateMap(destinationQuery) {
   const mapContainer = document.getElementById("mapContainer");
   if (!mapContainer) return;
+  
   mapContainer.classList.remove("hidden");
+  
   mapContainer.innerHTML = `
-        <iframe width="100%" height="250" style="border:0;" loading="lazy" allowfullscreen
-            src="https://www.google.com/maps?q=${encodeURIComponent(destinationQuery)}&t=&z=12&ie=UTF8&iwloc=&output=embed"
-        </iframe>`;
+  <div class="w-full my-2">
+        <iframe width="100%" height="150" style="border:0; border-radius: 8px;" loading="lazy" allowfullscreen
+        src="https://www.google.com/maps?q=${encodeURIComponent(destinationQuery)}&t=&z=12&ie=UTF8&iwloc=&output=embed"
+            
+        </iframe>
+        </div>`;
 }

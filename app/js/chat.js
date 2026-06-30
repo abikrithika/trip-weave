@@ -1,5 +1,7 @@
 import { showNotification } from './ui.js';
 
+const TYPING_DELAY_MS = 18;
+
 export async function loadChatHistory() {
   const token = localStorage.getItem("userToken");
   const chatHistory = document.querySelector(".chat-history");
@@ -80,9 +82,76 @@ export function appendChatMessage(text, role, saveToDb = false) {
   chatHistory.appendChild(msgDiv);
   chatHistory.scrollTop = chatHistory.scrollHeight;
 
-  // NEW: Trigger database save if requested
   if (saveToDb) {
-    const dbRole = role === "user" ? "user" : "assistant"; // Formats role for Prisma enum
+    const dbRole = role === "user" ? "user" : "assistant";
     saveMessageToDB(dbRole, text);
   }
+}
+
+function scrollChatToBottom() {
+  const chatHistory = document.querySelector(".chat-history");
+  if (chatHistory) chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function createStreamingAssistantMessage() {
+  const chatHistory = document.querySelector(".chat-history");
+  if (!chatHistory) return null;
+
+  const msgDiv = document.createElement("div");
+  msgDiv.className =
+    "message ai-message streaming-message bg-blue-50 text-blue-900 max-w-[80%] p-3 rounded-2xl rounded-tl-none text-sm shadow-sm mb-4";
+
+  const contentEl = document.createElement("div");
+  contentEl.className = "stream-content whitespace-pre-wrap";
+  const cursorEl = document.createElement("span");
+  cursorEl.className = "stream-cursor";
+  cursorEl.setAttribute("aria-hidden", "true");
+
+  msgDiv.append(contentEl, cursorEl);
+  chatHistory.appendChild(msgDiv);
+  scrollChatToBottom();
+
+  let fullText = "";
+  let queue = Promise.resolve();
+
+  const typeChars = (text) => {
+    queue = queue.then(async () => {
+      for (const char of text) {
+        fullText += char;
+        contentEl.textContent = fullText;
+        scrollChatToBottom();
+        await wait(TYPING_DELAY_MS);
+      }
+    });
+    return queue;
+  };
+
+  return {
+    async appendStatus(text) {
+      if (fullText) await typeChars("\n");
+      await typeChars(text);
+    },
+    async appendMessage(text) {
+      if (fullText) {
+        contentEl.textContent = "";
+        fullText = "";
+      }
+      await typeChars(text);
+    },
+    async finish(saveToDb = false) {
+      await queue;
+      cursorEl.remove();
+      msgDiv.classList.remove("streaming-message");
+      if (saveToDb && fullText) {
+        saveMessageToDB("assistant", fullText);
+      }
+    },
+    getText() {
+      return fullText;
+    },
+  };
 }

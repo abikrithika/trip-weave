@@ -1,6 +1,6 @@
-import { appendChatMessage } from "./chat.js";
-import { showNotification } from "./ui.js";
+import { appendChatMessage, createStreamingAssistantMessage } from "./chat.js";
 import { getAirlineDisplayData } from "./airline.js";
+import { API_BASE, consumeSseStream } from "./sse.js";
 let conversationState = {
   destination: null
 };
@@ -27,32 +27,6 @@ function calculateSliceDuration(slice) {
   const first = segments[0];
   const last = segments[segments.length - 1];
   return calculateFlightDuration({ departing_at: first?.departing_at, arriving_at: last?.arriving_at });
-}
-
-function isReturnTrip(extracted) {
-  return extracted.trip_type === "return" || Boolean(extracted.return_date);
-}
-
-function buildSearchSlices(extracted, destination) {
-  const origin = extracted.origin_airport || null;
-  const outbound = {
-    destination,
-    departure_date: extracted.departure_date,
-  };
-  if (origin) outbound.origin = origin;
-
-  const slices = [outbound];
-
-  if (extracted.return_date) {
-    const inbound = {
-      origin: destination,
-      departure_date: extracted.return_date,
-    };
-    if (origin) inbound.destination = origin;
-    slices.push(inbound);
-  }
-
-  return slices;
 }
 
 function getBaggageInfo(flight) {
@@ -170,129 +144,71 @@ export function renderFlightsToScreen(flightsArray, showAll = false) {
 export async function testLiveFlightSearch(userPrompt) {
   const container = document.getElementById("flightsContainer");
 
-  // 1. Gibberish check
   const isGibberish = userPrompt.length < 4 || !/[aeiou]/i.test(userPrompt);
   if (isGibberish) {
     appendChatMessage("Im just a travel Assistant Could you tell me where you'd like to fly?", "ai", true);
     return;
   }
 
+  const stream = createStreamingAssistantMessage();
+  if (!stream) return;
+
   try {
-    const extractionPrompt = conversationState.destination
-      ? `Context: The user previously mentioned wanting to fly to ${conversationState.destination}.\nUser message: ${userPrompt}`
-      : userPrompt;
-
-    const groqResponse = await fetch("http://localhost:5500/api/groq/extract", {
+    const response = await fetch(`${API_BASE}/api/flights/search-stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: extractionPrompt }),
+      body: JSON.stringify({
+        prompt: userPrompt,
+        context: conversationState.destination
+          ? { destination: conversationState.destination }
+          : undefined,
+      }),
     });
 
-    const groqData = await groqResponse.json();
-    console.log("FULL GROQ RESPONSE:", JSON.stringify(groqData, null, 2));
+    let searchStarted = false;
+    let finalOffers = null;
+    let finalDestination = null;
 
-    const extracted = groqData.parsed || groqData.data || {};
-    console.log("Extracted parameters:", JSON.stringify(extracted, null, 2));
-
-    if (!groqResponse.ok && !extracted.destination_airport && !extracted.departure_date) {
-      throw new Error(groqData.errors?.[0] || `Server responded with ${groqResponse.status}`);
-    }
-
-    if (!extracted.destination_airport) {
-      const match = userPrompt.match(/to\s+([a-zA-Z\s]+)/i);
-      if (match?.[1]) {
-        extracted.destination_airport = match[1].trim();
-        console.log("Extracted destination from safety net:", extracted.destination_airport);
-      }
-    }
-
-    if (extracted.destination_airport) {
-      conversationState.destination = extracted.destination_airport;
-    }
-
-    const finalDestination = conversationState.destination;
-
-    if (!finalDestination) {
-      appendChatMessage("I'm a travel assistant. Where would you like to fly today?", "ai", true);
-      return;
-    }
-
-    if (!extracted.departure_date) {
-      appendChatMessage(`That's great you want to fly to ${conversationState.destination}. Could you please tell me when you'd like to travel?`, "ai", true);
-      return;
-    }
-
-    const returnTrip = isReturnTrip(extracted);
-
-    if (returnTrip && !extracted.return_date) {
-      appendChatMessage(`Got it — a return trip to ${conversationState.destination}. When would you like to come back?`, "ai", true);
-      return;
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const departureDate = new Date(extracted.departure_date);
-    if (departureDate < today) {
-      appendChatMessage("I cannot search for flights in the past. Please provide a future date.", "ai", true);
-      return;
-    }
-
-    if (extracted.return_date) {
-      const returnDate = new Date(extracted.return_date);
-      if (returnDate < today) {
-        appendChatMessage("The return date cannot be in the past. Please provide a future return date.", "ai", true);
-        return;
-      }
-      if (returnDate < departureDate) {
-        appendChatMessage("The return date must be on or after your departure date.", "ai", true);
-        return;
-      }
-    }
-
-    if (container) {
-      container.innerHTML = `<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium animate-pulse">Searching ${returnTrip ? "return" : ""} flights...</p></div>`;
-    }
-
-    const payload = {
-      slices: buildSearchSlices(extracted, finalDestination),
-      passengers: [{ type: "adult" }],
-      cabin_class: "economy",
-      filters: {
-        direct_only: extracted.direct_only,
-        preferred_airlines: extracted.preferred_airlines,
-        baggage_required: extracted.baggage_required,
-        departure_time: extracted.departure_time,
+    await consumeSseStream(response, {
+      status: ({ text }) => stream.appendStatus(text),
+      message: ({ text }) => stream.appendMessage(text),
+      complete: ({ destination, offers }) => {
+        finalDestination = destination;
+        finalOffers = offers;
+        searchStarted = true;
       },
-    };
-
-    const flightResponse = await fetch("http://localhost:5500/api/flights/ai-search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      error: ({ message }) => {
+        if (container) {
+          container.innerHTML = `<p class="text-center py-8 text-red-500">${message}</p>`;
+        }
+      },
+      done: ({ needsInput, context }) => {
+        if (context?.destination) {
+          conversationState.destination = context.destination;
+        }
+        if (!needsInput) {
+          conversationState.destination = null;
+        }
+      },
     });
-    const flightData = await flightResponse.json();
 
-    if (flightData.data?.data?.offers) {
-      renderFlightsToScreen(flightData.data.data.offers, false);
-      updateMap(`${conversationState.destination} Airport`);
-      conversationState.destination = null; // Clear memory after success
-    } else {
+    await stream.finish(true);
+
+    if (searchStarted && finalOffers?.length > 0) {
+      renderFlightsToScreen(finalOffers, false);
+      updateMap(`${finalDestination} Airport`);
+    } else if (searchStarted) {
       if (container) container.innerHTML = '<p class="text-center py-8">No flights found.</p>';
     }
   } catch (error) {
     console.error("Search Error:", error);
+    await stream.appendMessage("Something went wrong. Please try again.");
+    await stream.finish(true);
     if (container) {
-      // Check if the error message indicates a rate limit
-      if (error.message.includes("Rate limit") || error.message.includes("429")) {
-        container.innerHTML = '<p class="text-center py-8 text-yellow-600">Usage limit reached. Please wait a few minutes and try again.</p>';
-      } else {
-        // Show generic error for other issues
-        container.innerHTML = '<p class="text-center py-8 text-red-500">Error searching flights. Please try again.</p>';
-      }
+      container.innerHTML = '<p class="text-center py-8 text-red-500">Error searching flights. Please try again.</p>';
     }
   }
-  }
+}
 
 export function updateMap(destinationQuery) {
   const mapContainer = document.getElementById("mapContainer");

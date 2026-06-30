@@ -6,6 +6,7 @@ export async function loadChatHistory() {
   if (!chatHistory) return;
 
   if (!token) {
+    console.log("No token, skipping chat history load.");
     chatHistory.innerHTML = ""; 
     appendChatMessage("Hi! Where would you like to fly today?", "ai", false);
     return; 

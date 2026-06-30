@@ -269,7 +269,8 @@ async function loadSavedFlights() {
     }
 
     const data = await response.json();
-    renderSavedFlights(data.flights || []);
+    window.savedFlightsCache = data.flights || [];
+  renderSavedFlights(window.savedFlightsCache);
   } catch (error) {
     console.error(error);
     clearSavedFlights();
@@ -309,40 +310,35 @@ function renderSavedFlights(flights) {
   }
 
   container.innerHTML = flights
-    .map((flight) => {
-      const airlineData = getAirlineDisplayData(flight);
+   
+  .map((flight) => {
+    const airlineData = getAirlineDisplayData(flight);
+    // Use the flight_number from the flight object directly
+    const fNum = flight.flight_number || flight.flightNumber || "UNKNOWN";
 
-      return `
+    return `
       <div class="border-b py-3">
         <div class="flex items-start gap-3">
           ${airlineData.logoUrl ? `<img src="${airlineData.logoUrl}" alt="${airlineData.name}" class="h-10 w-10 rounded-lg object-contain bg-gray-50 border border-gray-100" onerror="this.style.display='none'" />` : '<div class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-500">AIR</div>'}
-
           <div class="flex-1">
-            <h4 class="font-semibold">
-              ${flight.origin} → ${flight.destination}
-            </h4>
-
-            <p class="text-xs text-gray-500">
-              Flight ${airlineData.flightNumber}
-            </p>
-
-            <p class="font-bold text-blue-600 mt-1">
-              USD ${flight.price}
-            </p>
+            <h4 class="font-semibold">${flight.origin} → ${flight.destination}</h4>
+            <p class="text-xs text-gray-500">Flight ${fNum}</p>
+            <p class="font-bold text-blue-600 mt-1">USD ${flight.price}</p>
+            <div>
+              <button
+                data-id="${flight.id}"
+                data-flight-number="${fNum}"
+                class="remove-saved-flight text-red-500 text-sm mt-2"
+              >
+                Remove
+              </button>
+            </div>
           </div>
         </div>
-
-       <button
-  data-id="${flight.id}"
-  data-flight-number="${flight.flight_number}"
-  class="remove-saved-flight text-red-500 text-sm mt-2"
->
-  Remove
-</button>
       </div>
     `;
-    })
-    .join("");
+  })
+  .join("");
 }
 
 document.addEventListener("click", async (event) => {
@@ -389,7 +385,7 @@ document.addEventListener("click", async (event) => {
   if (removeBtn) {
     const id = removeBtn.dataset.id;
     const flightNumber = removeBtn.dataset.flightNumber;
-
+console.log("Removing flightNumber:", flightNumber);
     await deleteSavedFlight(id);
     // Sync heart icons to grey
     updateHeartIcon(flightNumber, false);
@@ -403,7 +399,9 @@ window.loadSavedFlights = loadSavedFlights;
 window.clearSavedFlights = clearSavedFlights;
 
 function updateHeartIcon(flightNumber, isSaved) {
+  console.log("Searching for heart button with flight number:", flightNumber);
   const buttons = document.querySelectorAll(`.save-flight-btn[data-flight*='"${flightNumber}"']`);
+  console.log("Found buttons:", buttons.length);
   buttons.forEach(btn => {
     if (isSaved) {
       btn.classList.add("text-red-500");
@@ -414,4 +412,5 @@ function updateHeartIcon(flightNumber, isSaved) {
       btn.classList.add("text-gray-500");
       btn.innerHTML = '<i class="fa-regular fa-heart"></i>';
     }
-  });}
+  });
+}

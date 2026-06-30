@@ -1,7 +1,9 @@
 import { appendChatMessage } from "./chat.js";
 import { showNotification } from "./ui.js";
 import { getAirlineDisplayData } from "./airline.js";
-
+let conversationState = {
+  destination: null
+};
 // Global cache for toggling hearts
 window.savedFlightsCache = [];
 
@@ -53,7 +55,9 @@ export function renderFlightsToScreen(flightsArray, showAll = false) {
     const airlineData = getAirlineDisplayData(flight);
     const segment = flight.slices?.[0]?.segments?.[0];
     const baggage = getBaggageInfo(flight);
-    const isSaved = window.savedFlightsCache?.some(f => f.flightNumber === flight.flight_number);
+   const isSaved = window.savedFlightsCache?.some(f => 
+  String(f.flight_number || f.flightNumber) === String(flight.flight_number)
+);
 
     const card = document.createElement("div");
     card.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition mb-3";
@@ -115,60 +119,117 @@ export function renderFlightsToScreen(flightsArray, showAll = false) {
 // --- CORE SEARCH LOGIC ---
 export async function testLiveFlightSearch(userPrompt) {
   const container = document.getElementById("flightsContainer");
-  if (container) {
-    container.innerHTML = '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium animate-pulse">Searching global flights...</p></div>';
+
+  // 1. Gibberish check
+  const isGibberish = userPrompt.length < 4 || !/[aeiou]/i.test(userPrompt);
+  if (isGibberish) {
+    appendChatMessage("Im just a travel Assistant Could you tell me where you'd like to fly?", "ai", true);
+    return;
   }
 
   try {
-    // 1. Fetch extracted data from Groq
-    const promptToSend = `Extract flight info from: "${userPrompt}". Current year 2026. Return JSON with: origin_airport, destination_airport, departure_date.`;
+    // 2. Define prompt and fetch BEFORE using it
+const promptToSend = `
+Extract flight search parameters from: "${userPrompt}". 
+- destination_airport: identify and extract the city or country mentioned by the user.
+- origin_airport: default to "CPH" if not mentioned.
+- departure_date: extract as YYYY-MM-DD, or null if missing.
+Return ONLY valid JSON.
+`;
     const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptToSend }),
-    });
-    const groqData = await groqResponse.json();
-    const extracted = groqData.data || {};
+    method: "POST",
+    headers: { "Content-Type": "application/json" }, 
+    body: JSON.stringify({ prompt: promptToSend })
+});
 
-    if (!extracted.destination_airport) {
-      appendChatMessage("I'm not sure which city you want to visit. Could you be more specific?", "ai", true);
-      if (container) container.innerHTML = "";
+if (!groqResponse.ok) {
+  let errorData;
+ try {
+    errorData = await groqResponse.json();
+  }catch (e) {
+    errorData = { errors: [`Server responded with ${groqResponse.status}`] };
+  }
+  throw new Error(errorData.errors?.[1] || `Server responded with ${groqResponse.status}`);
+}
+    const groqData = await groqResponse.json();
+   console.log("FULL GROQ RESPONSE:", JSON.stringify(groqData, null, 2));
+  const extracted = groqData.parsed || groqData.data || groqData || {};
+if (!extracted.destination_airport) {
+    const match = userPrompt.match(/to\s+([a-zA-Z\s]+)/i);
+    if (match && match[1]) {
+        extracted.destination_airport = match[1].trim();
+        console.log("Extracted destination from safety net:", extracted.destination_airport);
+    }
+}
+   if (extracted.destination_airport) {
+    conversationState.destination = extracted.destination_airport;
+}
+const finalDestination = conversationState.destination;
+
+if (!finalDestination) {
+    appendChatMessage("I'm a travel assistant. Where would you like to fly today?", "ai", true);
+    return;
+}
+    if (!extracted.departure_date) {
+      appendChatMessage(`That's great you want to fly to ${conversationState.destination}..could you please provide when would you like to travel`, "ai", true);
       return;
     }
 
-    // 2. Prepare payload with required fields
-    const payload = {
-      slices: [
-        {
-          origin: extracted.origin_airport || "CPH",
-          destination: extracted.destination_airport,
-          departure_date: extracted.departure_date || "2026-12-01",
-        },
-      ],
-      passengers: [{ type: "adult" }],
+    // 5. Past date check
+    const departureDate = new Date(extracted.departure_date);
+    if (departureDate < new Date().setHours(0, 0, 0, 0)) {
+      appendChatMessage("I cannot search for flights in the past. Please provide a future date.", "ai", true);
+      return;
+    }
+
+    // 6. Search UI
+    if (container) container.innerHTML = '<div class="text-center text-gray-500 py-16"><p class="text-lg font-medium animate-pulse">Searching global flights...</p></div>';
+
+    // 7. Execute search
+   const payload = {
+      slices: [{
+        origin: extracted.origin_airport || "CPH",
+        destination: conversationState.destination,
+        departure_date: extracted.departure_date
+      }],
+     passengers: [{ type: "adult" }],
       cabin_class: "economy",
+filters: {
+          direct_only: extracted.direct_only,
+          preferred_airlines: extracted.preferred_airlines,
+          baggage_required: extracted.baggage_required,
+          departure_time: extracted.departure_time
+      }
+
     };
 
-    // 3. Search flights
     const flightResponse = await fetch("http://localhost:5050/api/flights/ai-search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     const flightData = await flightResponse.json();
 
     if (flightData.data?.data?.offers) {
       renderFlightsToScreen(flightData.data.data.offers, false);
-      updateMap(`${extracted.destination_airport} Airport`);
+      updateMap(`${conversationState.destination} Airport`);
+      conversationState.destination = null; // Clear memory after success
     } else {
       if (container) container.innerHTML = '<p class="text-center py-8">No flights found.</p>';
     }
   } catch (error) {
     console.error("Search Error:", error);
-    if (container) container.innerHTML = '<p class="text-center py-8 text-red-500">Error searching flights.</p>';
+    if (container) {
+      // Check if the error message indicates a rate limit
+      if (error.message.includes("Rate limit") || error.message.includes("429")) {
+        container.innerHTML = '<p class="text-center py-8 text-yellow-600">Usage limit reached. Please wait a few minutes and try again.</p>';
+      } else {
+        // Show generic error for other issues
+        container.innerHTML = '<p class="text-center py-8 text-red-500">Error searching flights. Please try again.</p>';
+      }
+    }
   }
-}
+  }
 
 export function updateMap(destinationQuery) {
   const mapContainer = document.getElementById("mapContainer");
@@ -178,9 +239,10 @@ export function updateMap(destinationQuery) {
   
   mapContainer.innerHTML = `
   <div class="w-full my-2">
-        <iframe width="100%" height="150" style="border:0; border-radius: 8px;" loading="lazy" allowfullscreen
-        src="https://www.google.com/maps?q=${encodeURIComponent(destinationQuery)}&t=&z=12&ie=UTF8&iwloc=&output=embed"
+  <iframe width="100%" height="150" style="border:0; border-radius: 8px;" loading="lazy" allowfullscreen
+  src="https://www.google.com/maps?q=${encodeURIComponent(destinationQuery)}&t=&z=12&ie=UTF8&iwloc=&output=embed"
             
         </iframe>
         </div>`;
 }
+//End of file

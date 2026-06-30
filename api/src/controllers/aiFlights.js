@@ -10,7 +10,6 @@ function buildDuffelSearchPayload(tripQuery) {
       departure_date: tripQuery.departure_date,
     },
   ];
-
   // If a return_date is provided, add a second slice for the return leg
   if (tripQuery.return_date) {
     slices.push({
@@ -19,7 +18,6 @@ function buildDuffelSearchPayload(tripQuery) {
       departure_date: tripQuery.return_date,
     });
   }
-
   return {
     slices,
     passengers: [{ type: "adult" }],
@@ -28,9 +26,13 @@ function buildDuffelSearchPayload(tripQuery) {
 }
 
 export const aiFlightSearchController = async (req, res, next) => {
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit = Math.max(parseInt(req.query.limit) || 7, 1);
+
   console.log("--- DEBUG: RECEIVED PAYLOAD ---");
   console.log(JSON.stringify(req.body, null, 2));
-if (req.body.slices) {
+
+  if (req.body.slices) {
     try {
       if (!req.body.slices[0]?.origin) {
         req.body.slices[0].origin = await detectFallbackOrigin(req);
@@ -40,14 +42,35 @@ if (req.body.slices) {
         req.body.slices[1].destination = resolvedOrigin;
       }
       const flights = await searchFlights(req.body);
-      return res.status(200).json({ success: true, data: flights });
-    } catch (error) { return next(error); }
+      const offers = flights.data?.data?.offers || flights.data?.offers || [];
+      const start = (page - 1) * limit;
+      const end = start + limit;
+      const paginatedOffers = offers.slice(start, end);
+      const totalPages = Math.ceil(offers.length / limit);
+      return res.status(200).json({
+        success: true,
+        pagination: {
+          page,
+          limit,
+          totalOffers: offers.length,
+          totalPages,
+          hasNextPage: end < offers.length,
+          hasPreviousPage: page > 1,
+        },
+        data: {
+          offers: paginatedOffers,
+        },
+      });
+    } catch (error) {
+      return next(error);
+    }
   }
 
-const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
-
- if (typeof userText !== "string" || userText.trim() === "") {
-    return res.status(400).json({ success: false, message: "Missing request data." });
+  const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
+  if (typeof userText !== "string" || userText.trim() === "") {
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing request data." });
   }
 
   try {
@@ -57,13 +80,11 @@ const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
       errors: extracted.errors,
       parsed: extracted.parsed,
     });
-
     if (extracted.parsed && !extracted.parsed.origin_airport) {
       const fallback = await detectFallbackOrigin(req);
       extracted.parsed.origin_airport = fallback;
       console.log("Applied fallback origin from IP:", fallback);
     }
-
     if (!extracted.ok) {
       return res.status(422).json({
         success: false,
@@ -72,7 +93,6 @@ const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
         errors: extracted.errors,
       });
     }
-
     const duffelPayload = buildDuffelSearchPayload(extracted.parsed);
     console.log("Calling Duffel with payload:", JSON.stringify(duffelPayload));
     const flights = await searchFlights(duffelPayload);
@@ -84,7 +104,6 @@ const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
           : "object"
         : typeof flights,
     );
-
     return res.status(200).json({
       success: true,
       query: extracted.parsed,

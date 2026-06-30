@@ -12,7 +12,8 @@ const SYSTEM_PROMPT = `You are a headless JSON extraction engine. Follow these r
 - If the user asks for direct/non-stop flights, set direct_only to true.
 - If the user asks for baggage, set baggage_required to true.
 - If a field cannot be determined, set that field to null.
-- Convert city/country names to 3-letter IATA airport codes. Default origin to "CPH" when not mentioned.
+- Convert city/country names to 3-letter IATA airport codes.
+- Set origin_airport to null when the user does not mention a departure city or airport. Do not guess the origin.
 
 Example return trip (follow structure only):
 {

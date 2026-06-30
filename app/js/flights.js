@@ -34,19 +34,22 @@ function isReturnTrip(extracted) {
 }
 
 function buildSearchSlices(extracted, destination) {
-  const origin = extracted.origin_airport || "CPH";
-  const slices = [{
-    origin,
+  const origin = extracted.origin_airport || null;
+  const outbound = {
     destination,
     departure_date: extracted.departure_date,
-  }];
+  };
+  if (origin) outbound.origin = origin;
+
+  const slices = [outbound];
 
   if (extracted.return_date) {
-    slices.push({
+    const inbound = {
       origin: destination,
-      destination: origin,
       departure_date: extracted.return_date,
-    });
+    };
+    if (origin) inbound.destination = origin;
+    slices.push(inbound);
   }
 
   return slices;

@@ -182,7 +182,7 @@ const source = raw && typeof raw === "object" ? raw : {};
 
   return {
 
-  origin_airport: normalizeIataCode(source.origin_airport) || "CPH",
+  origin_airport: normalizeIataCode(source.origin_airport) || null,
     destination_airport: normalizeIataCode(source.destination_airport) || null,
 
     departure_date: source.departure_date || null,

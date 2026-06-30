@@ -137,7 +137,7 @@ Extract flight search parameters from: "${userPrompt}".
 - departure_date: extract as YYYY-MM-DD from "${userPrompt}". Assume year 2026.
 Return ONLY valid JSON.
 `;
-    const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
+    const groqResponse = await fetch("http://localhost:5500/api/groq/extract", {
     method: "POST",
     headers: { "Content-Type": "application/json" }, 
     body: JSON.stringify({ prompt: promptToSend })
@@ -205,7 +205,7 @@ filters: {
 
     };
 
-    const flightResponse = await fetch("http://localhost:5050/api/flights/ai-search", {
+    const flightResponse = await fetch("http://localhost:5500/api/flights/ai-search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

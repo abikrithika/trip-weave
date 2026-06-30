@@ -13,7 +13,7 @@ export async function loadChatHistory() {
   }
 
   try {
-    const convRes = await fetch(`http://localhost:5050/api/conversations/current`, {
+    const convRes = await fetch(`http://localhost:5500/api/conversations/current`, {
       headers: { "Authorization": `Bearer ${token}` }
     });
     if (!convRes.ok) return;
@@ -22,7 +22,7 @@ export async function loadChatHistory() {
     const conversationId = convData.id;
     localStorage.setItem("conversationId", conversationId); 
 
-    const response = await fetch(`http://localhost:5050/api/conversations/${conversationId}/messages`, {
+    const response = await fetch(`http://localhost:5500/api/conversations/${conversationId}/messages`, {
       headers: { "Authorization": `Bearer ${token}` }
     });
     
@@ -54,7 +54,7 @@ export async function saveMessageToDB(dbRole, text) {
   if (!token || !conversationId) return; // Skip if guest or no chat ID
 
   try {
-    await fetch(`http://localhost:5050/api/conversations/${conversationId}/messages`, {
+    await fetch(`http://localhost:5500/api/conversations/${conversationId}/messages`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

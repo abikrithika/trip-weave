@@ -25,7 +25,7 @@ app.use("/api", apiNotFoundHandler);
 app.use(express.static(path.resolve(__dirname, "../../app")));
 
 // 3. Catch-all route for SPA (Single Page Application)
-app.get("*", (req, res) => {
+app.get("/{*splat}", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../../app/index.html"));
 });
 

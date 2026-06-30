@@ -175,13 +175,18 @@ function normalizeFilters(value) {
 function normalizeTripQuery(raw) {
 const source = raw && typeof raw === "object" ? raw : {};
   const tomorrow = new Date();
+
   tomorrow.setDate(tomorrow.getDate() + 1);
-  //const tomorrowDateStr = tomorrow.toISOString().split('T')[0];
+
+  const tomorrowDateStr = tomorrow.toISOString().split('T')[0];
 
   return {
+
   origin_airport: normalizeIataCode(source.origin_airport) || "CPH",
     destination_airport: normalizeIataCode(source.destination_airport) || null,
+
     departure_date: source.departure_date || null,
+    
     trip_type: source.trip_type || "one_way", 
     return_date: source.return_date || null,
     max_price_dkk: source.max_price_dkk || null,

@@ -130,10 +130,11 @@ export async function testLiveFlightSearch(userPrompt) {
   try {
     // 2. Define prompt and fetch BEFORE using it
 const promptToSend = `
+Context: User wants to fly to ${conversationState.destination || "an unknown destination"}.
 Extract flight search parameters from: "${userPrompt}". 
-- destination_airport: identify and extract the city or country mentioned by the user.
+- destination_airport: identify and extract the city or country mentioned by the user (or use context).
 - origin_airport: default to "CPH" if not mentioned.
-- departure_date: extract as YYYY-MM-DD, or null if missing.
+- departure_date: extract as YYYY-MM-DD from "${userPrompt}". Assume year 2026.
 Return ONLY valid JSON.
 `;
     const groqResponse = await fetch("http://localhost:5050/api/groq/extract", {
@@ -154,6 +155,7 @@ if (!groqResponse.ok) {
     const groqData = await groqResponse.json();
    console.log("FULL GROQ RESPONSE:", JSON.stringify(groqData, null, 2));
   const extracted = groqData.parsed || groqData.data || groqData || {};
+  console.log("Extracted parameters:", JSON.stringify(extracted, null, 2));
 if (!extracted.destination_airport) {
     const match = userPrompt.match(/to\s+([a-zA-Z\s]+)/i);
     if (match && match[1]) {

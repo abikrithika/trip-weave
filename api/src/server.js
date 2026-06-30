@@ -14,6 +14,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const app = express();
 
+app.set("trust proxy", true);
 app.use(cors());
 app.use(express.json());
 

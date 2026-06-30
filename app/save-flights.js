@@ -2,7 +2,7 @@ import { openAuthModal } from "./js/auth.js";
 import { showNotification } from "./js/ui.js";
 import { getAirlineDisplayData } from "./js/airline.js";
 
-const SAVED_FLIGHTS_API = "http://localhost:5050/api/saved-flights";
+const SAVED_FLIGHTS_API = "http://localhost:5500/api/saved-flights";
 
 function normalizeDepartureTime(value) {
   if (!value) {

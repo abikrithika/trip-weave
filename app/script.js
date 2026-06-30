@@ -33,7 +33,7 @@ function showNotification(message, type = 'success') {
 let isLoginMode = true;
 let flightContext = "";
 //const API_BASE_URL = 'http://localhost:5500';
-const API_BASE_URL = 'http://localhost:5050';
+const API_BASE_URL = 'http://localhost:5500';
 
 window.toggleDrawer = toggleDrawer;
 window.submitAuthForm = submitAuthForm;

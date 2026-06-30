@@ -1,4 +1,5 @@
 import { extractTripQuery } from "../groq/extractor.js";
+import { detectFallbackOrigin } from "../utils/originFallback.js";
 
 export const extractTripQueryController = async (req, res) => {
   const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
@@ -12,6 +13,10 @@ export const extractTripQueryController = async (req, res) => {
 
   try {
     const result = await extractTripQuery(userText.trim());
+
+    if (result.parsed && !result.parsed.origin_airport) {
+      result.parsed.origin_airport = await detectFallbackOrigin(req);
+    }
 
     return res.status(result.ok ? 200 : 422).json({
       success: result.ok,

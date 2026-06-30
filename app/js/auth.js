@@ -73,7 +73,7 @@ export async function submitAuthForm(e) {
   if (!isLoginMode) payload.name = name;
 
   try {
-    const response = await fetch(`http://localhost:5050${endpoint}`, {
+    const response = await fetch(`http://localhost:5500${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

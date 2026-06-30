@@ -109,8 +109,8 @@ body {
 
 .dashboard-split {
   display: grid;
-  grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.1fr);
-  gap: 16px;
+  grid-template-columns: minmax(360px, 1fr) minmax(520px, 1fr);
+  gap: 8px;
   height: calc(100vh - 120px); /* Keeps dashboard within viewport */
 }
 
@@ -265,6 +265,22 @@ body {
   color: #123a56;
   background: linear-gradient(160deg, #d4ecff, #edf6ff);
   border: 1px solid #c6e2ff;
+}
+
+.streaming-message .stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: #2b6ea8;
+  animation: stream-blink 1s step-end infinite;
+}
+
+@keyframes stream-blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .user-message {
@@ -537,10 +553,8 @@ body {
     padding-bottom: 142px;
   }
   .dashboard-left {
+    display: none;
     padding: 18px;
-  }
-  .dashboard-right {
-    grid-template-rows: minmax(260px, auto) minmax(280px, auto);
   }
 }
 

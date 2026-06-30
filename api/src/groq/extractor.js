@@ -182,12 +182,12 @@ const source = raw && typeof raw === "object" ? raw : {};
 
   return {
 
-  origin_airport: normalizeIataCode(source.origin_airport) || "CPH",
+  origin_airport: normalizeIataCode(source.origin_airport) || null,
     destination_airport: normalizeIataCode(source.destination_airport) || null,
 
     departure_date: source.departure_date || null,
     
-    trip_type: source.trip_type || "one_way", 
+    trip_type: normalizeTripType(source.trip_type, source.return_date),
     return_date: source.return_date || null,
     max_price_dkk: source.max_price_dkk || null,
     vibe_tags: source.vibe_tags || [],
@@ -329,7 +329,7 @@ async function extractTripQuery(userText, opts = {}) {
 
   parsed = normalizeTripQuery(parsed);
 
-parsed.trip_type = parsed.trip_type || "one_way";
+parsed.trip_type = normalizeTripType(parsed.trip_type, parsed.return_date);
   parsed.vibe_tags = parsed.vibe_tags || [];
   parsed.max_price_dkk = parsed.max_price_dkk || null;
   parsed.return_date = parsed.return_date || null;

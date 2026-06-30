@@ -32,8 +32,12 @@ export const aiFlightSearchController = async (req, res, next) => {
   console.log(JSON.stringify(req.body, null, 2));
 if (req.body.slices) {
     try {
-      if (!req.body.slices[0].origin) {
+      if (!req.body.slices[0]?.origin) {
         req.body.slices[0].origin = await detectFallbackOrigin(req);
+      }
+      const resolvedOrigin = req.body.slices[0].origin;
+      if (req.body.slices[1] && !req.body.slices[1].destination) {
+        req.body.slices[1].destination = resolvedOrigin;
       }
       const flights = await searchFlights(req.body);
       return res.status(200).json({ success: true, data: flights });
@@ -54,30 +58,19 @@ const userText = req.body?.prompt ?? req.body?.text ?? req.body?.userText;
       parsed: extracted.parsed,
     });
 
+    if (extracted.parsed && !extracted.parsed.origin_airport) {
+      const fallback = await detectFallbackOrigin(req);
+      extracted.parsed.origin_airport = fallback;
+      console.log("Applied fallback origin from IP:", fallback);
+    }
+
     if (!extracted.ok) {
-      const errs = extracted.errors || [];
-      // If origin is missing but destination/date was extracted, apply fallback and continue.
-      if (
-        extracted.parsed &&
-        !extracted.parsed.origin_airport &&
-        extracted.parsed.destination_airport
-      ) {
-        const fallback = await detectFallbackOrigin(req);
-        extracted.parsed.origin_airport = fallback;
-        console.log(
-          "Applied fallback origin (heuristic) and continuing:",
-          fallback,
-          "errors:",
-          errs,
-        );
-      } else {
-        return res.status(422).json({
-          success: false,
-          message: "Could not extract a complete flight search query.",
-          query: extracted.parsed,
-          errors: extracted.errors,
-        });
-      }
+      return res.status(422).json({
+        success: false,
+        message: "Could not extract a complete flight search query.",
+        query: extracted.parsed,
+        errors: extracted.errors,
+      });
     }
 
     const duffelPayload = buildDuffelSearchPayload(extracted.parsed);

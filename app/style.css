@@ -109,8 +109,8 @@ body {
 
 .dashboard-split {
   display: grid;
-  grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.1fr);
-  gap: 16px;
+  grid-template-columns: minmax(360px, 1fr) minmax(520px, 1fr);
+  gap: 8px;
   height: calc(100vh - 120px); /* Keeps dashboard within viewport */
 }
 
@@ -537,10 +537,8 @@ body {
     padding-bottom: 142px;
   }
   .dashboard-left {
+    display: none;
     padding: 18px;
-  }
-  .dashboard-right {
-    grid-template-rows: minmax(260px, auto) minmax(280px, auto);
   }
 }
 

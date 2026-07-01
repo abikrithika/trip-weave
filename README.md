@@ -50,6 +50,7 @@ npm install -g concurrently
 npm install -g http-server
 npm install jsonwebtoken
 npm install bcrypt
+npm install request-ip
 
 ## Environment Variables
 

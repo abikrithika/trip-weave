@@ -16,7 +16,7 @@ The application uses an AI-powered extraction service (Groq) to convert user pro
 ## Project Board
 
 - Trello: https://trello.com/b/2veKRbtH/trip-weave
-- 
+  
 # Running the Project Locally
 
 ## Prerequisites
@@ -57,10 +57,13 @@ Create a `.env` file in the project root.
 
 Example:
 
-PORT=5500
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/trip_weave
-GROQ_API_KEY=sk_your_actual_api_key_here
-GROQ_MODEL=openai/gpt-oss-20b
+- PORT=5500
+- DATABASE_URL=postgresql://postgres:postgres@localhost:5432/trip_weave
+- GROQ_API_KEY=sk_your_actual_api_key_here
+- GROQ_MODEL=openai/gpt-oss-20b
+- JWT_SECRET=your_super_secret_key_here
+- DUFFEL_API_URL="https://api.duffel.com"
+- DUFFEL_TOKEN=your_duffel_secret_key_here
 Add any additional environment variables required by the application.
 
 If you need the Groq-specific setup details, see [api/src/groq/README.md](api/src/groq/README.md).

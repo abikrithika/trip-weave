@@ -199,7 +199,10 @@ export async function testLiveFlightSearch(userPrompt, page = 1, silent = false)
     if (searchStarted && finalOffers?.length > 0) {
       renderFlightsToScreen(finalOffers);
       if (finalPagination) renderPagination(finalPagination);
-      updateMap(`${finalDestination} Airport`);
+      const firstFlight = finalOffers[0];
+      const originIata  = firstFlight?.slices?.[0]?.origin?.iata_code ?? null;
+      const destIata    = firstFlight?.slices?.[0]?.destination?.iata_code ?? null;
+      updateMap(originIata, destIata);
     } else if (searchStarted) {
       if (container) container.innerHTML = '<p class="text-center py-8">No flights found.</p>';
     }
@@ -215,17 +218,124 @@ export async function testLiveFlightSearch(userPrompt, page = 1, silent = false)
   }
 }
 
-export function updateMap(destinationQuery) {
+// --- MODULE-LEVEL LEAFLET SINGLETON ---
+let _leafletMap = null;
+
+export async function updateMap(originIata, destIata) {
   const mapContainer = document.getElementById("mapContainer");
   if (!mapContainer) return;
 
+  // Destroy any previous Leaflet instance to avoid "already initialized" errors
+  if (_leafletMap) {
+    _leafletMap.remove();
+    _leafletMap = null;
+  }
+
+  // Reset container
+  mapContainer.innerHTML = "";
+  mapContainer.style.height = "210px";
   mapContainer.classList.remove("hidden");
 
-  mapContainer.innerHTML = `
-  <div class="w-full my-2">
-  <iframe width="100%" height="150" style="border:0; border-radius: 8px;" loading="lazy" allowfullscreen
-  src="https://www.google.com/maps?q=${encodeURIComponent(destinationQuery)}&t=&z=12&ie=UTF8&iwloc=&output=embed">
-        </iframe>
-        </div>`;
+  // Bail out if we have no IATA codes at all
+  if (!originIata && !destIata) return;
+
+  // Load the bundled airport coordinate dataset
+  let airports;
+  try {
+    const res = await fetch("./data/airports-by-iata.json");
+    airports = await res.json();
+  } catch (err) {
+    console.warn("[updateMap] Could not load airport data:", err);
+    return;
+  }
+
+  const originAirport = originIata ? airports[originIata] : null;
+  const destAirport   = destIata   ? airports[destIata]   : null;
+
+  if (!originAirport && !destAirport) {
+    console.warn("[updateMap] Neither IATA code found in dataset:", originIata, destIata);
+    return;
+  }
+
+  // --- Init Leaflet map ---
+  const L = window.L;
+  _leafletMap = L.map(mapContainer, { zoomControl: true, attributionControl: true });
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 18,
+  }).addTo(_leafletMap);
+
+  const bounds = [];
+
+  // Custom SVG icon factory
+  function makeIcon(color) {
+    return L.divIcon({
+      className: "",
+      html: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="30" viewBox="0 0 22 30">
+        <ellipse cx="11" cy="28" rx="5" ry="2" fill="rgba(0,0,0,0.18)"/>
+        <path d="M11 0 C6 0 2 4 2 9 C2 16 11 26 11 26 C11 26 20 16 20 9 C20 4 16 0 11 0Z" fill="${color}" stroke="white" stroke-width="1.5"/>
+        <circle cx="11" cy="9" r="4" fill="white" opacity="0.9"/>
+      </svg>`,
+      iconSize: [22, 30],
+      iconAnchor: [11, 30],
+      popupAnchor: [0, -30],
+    });
+  }
+
+  // Place origin marker
+  if (originAirport) {
+    const latlng = [originAirport.lat, originAirport.lng];
+    bounds.push(latlng);
+    L.marker(latlng, { icon: makeIcon("#2563eb") })
+      .addTo(_leafletMap)
+      .bindPopup(`<strong>${originIata}</strong><br>${originAirport.name}<br><em>${originAirport.city}, ${originAirport.country}</em>`);
+  }
+
+  // Place destination marker
+  if (destAirport) {
+    const latlng = [destAirport.lat, destAirport.lng];
+    bounds.push(latlng);
+    L.marker(latlng, { icon: makeIcon("#dc2626") })
+      .addTo(_leafletMap)
+      .bindPopup(`<strong>${destIata}</strong><br>${destAirport.name}<br><em>${destAirport.city}, ${destAirport.country}</em>`);
+  }
+
+  // Draw curved arc between the two airports (quadratic Bézier approximation)
+  if (originAirport && destAirport) {
+    const p1 = { lat: originAirport.lat, lng: originAirport.lng };
+    const p2 = { lat: destAirport.lat,   lng: destAirport.lng   };
+
+    // Control point: midpoint lifted towards the pole to create an arc
+    const midLat = (p1.lat + p2.lat) / 2;
+    const midLng = (p1.lng + p2.lng) / 2;
+    const latDist = Math.abs(p2.lat - p1.lat);
+    const lngDist = Math.abs(p2.lng - p1.lng);
+    const lift = Math.sqrt(latDist * latDist + lngDist * lngDist) * 0.25;
+    const ctrl = { lat: midLat + lift, lng: midLng };
+
+    // Sample 80 points along the Bézier curve
+    const arcPoints = [];
+    for (let i = 0; i <= 80; i++) {
+      const t = i / 80;
+      const lat = (1 - t) * (1 - t) * p1.lat + 2 * (1 - t) * t * ctrl.lat + t * t * p2.lat;
+      const lng = (1 - t) * (1 - t) * p1.lng + 2 * (1 - t) * t * ctrl.lng + t * t * p2.lng;
+      arcPoints.push([lat, lng]);
+    }
+
+    L.polyline(arcPoints, {
+      color: "#3b82f6",
+      weight: 2,
+      opacity: 0.75,
+      dashArray: "6 4",
+    }).addTo(_leafletMap);
+  }
+
+  // Fit map to show both airports
+  if (bounds.length > 1) {
+    _leafletMap.fitBounds(bounds, { padding: [30, 30] });
+  } else if (bounds.length === 1) {
+    _leafletMap.setView(bounds[0], 8);
+  }
 }
 //End of file

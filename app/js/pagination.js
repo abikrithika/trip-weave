@@ -12,9 +12,17 @@ export function renderPagination(pagination) {
 
   container.innerHTML = "";
 
-  const pagesPerGroup = 9;
-  const current = pagination.page;
   const total = pagination.totalPages;
+  const current = pagination.page;
+
+  // Hide container entirely if there's nothing to paginate
+  if (total <= 1) {
+    container.style.display = "none";
+    return;
+  }
+  container.style.display = "";
+
+  const pagesPerGroup = 9;
   const halfGroup = Math.floor(pagesPerGroup / 2);
   let start = Math.max(1, current - halfGroup);
   let end = Math.min(total, current + halfGroup);
@@ -27,7 +35,7 @@ export function renderPagination(pagination) {
 
     prev.onclick = (e) => {
       e.preventDefault();
-      testLiveFlightSearch(lastUserPrompt, current - 1);
+      testLiveFlightSearch(lastUserPrompt, current - 1, true);
     };
 
     container.appendChild(prev);
@@ -39,7 +47,7 @@ export function renderPagination(pagination) {
     first.textContent = "1";
     first.onclick = (e) => {
       e.preventDefault();
-      testLiveFlightSearch(lastUserPrompt, 1);
+      testLiveFlightSearch(lastUserPrompt, 1, true);
     };
     container.appendChild(first);
 
@@ -57,7 +65,7 @@ export function renderPagination(pagination) {
 
     pageBtn.onclick = (e) => {
       e.preventDefault();
-      testLiveFlightSearch(lastUserPrompt, i);
+      testLiveFlightSearch(lastUserPrompt, i, true);
     };
 
     container.appendChild(pageBtn);
@@ -73,7 +81,7 @@ export function renderPagination(pagination) {
     last.textContent = total;
     last.onclick = (e) => {
       e.preventDefault();
-      testLiveFlightSearch(lastUserPrompt, total);
+      testLiveFlightSearch(lastUserPrompt, total, true);
     };
 
     container.appendChild(last);
@@ -86,7 +94,7 @@ export function renderPagination(pagination) {
 
     next.onclick = (e) => {
       e.preventDefault();
-      testLiveFlightSearch(lastUserPrompt, current + 1);
+      testLiveFlightSearch(lastUserPrompt, current + 1, true);
     };
 
     container.appendChild(next);

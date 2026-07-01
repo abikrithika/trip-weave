@@ -44,14 +44,12 @@ function createInfoRow(text, className = "text-xs text-gray-500") {
 }
 
 // --- RENDER FUNCTION ---
-export function renderFlightsToScreen(flightsArray, showAll = false) {
+export function renderFlightsToScreen(flightsArray) {
   const container = document.getElementById("flightsContainer");
   if (!container) return;
   container.innerHTML = "";
   const userCurrency = localStorage.getItem("userCurrency") || "USD";
-  const limit = 2;
-  const displayFlights = showAll ? flightsArray : flightsArray.slice(0, limit);
-  displayFlights.forEach((flight) => {
+  flightsArray.forEach((flight) => {
     const airlineData = getAirlineDisplayData(flight);
     const outboundSlice = flight.slices?.[0];
     const returnSlice = flight.slices?.[1];
@@ -118,17 +116,10 @@ export function renderFlightsToScreen(flightsArray, showAll = false) {
     card.appendChild(wrapper);
     container.appendChild(card);
   });
-  if (!showAll && flightsArray.length > limit) {
-    const btn = document.createElement("button");
-    btn.textContent = "View more flights...";
-    btn.className = "text-blue-600 text-sm font-semibold w-full py-2 hover:underline mt-2";
-    btn.onclick = () => renderFlightsToScreen(flightsArray, true);
-    container.appendChild(btn);
-  }
 }
 
 // --- CORE SEARCH LOGIC ---
-export async function testLiveFlightSearch(userPrompt, page = 1) {
+export async function testLiveFlightSearch(userPrompt, page = 1, silent = false) {
   const container = document.getElementById("flightsContainer");
   setPaginationPrompt(userPrompt);
 
@@ -138,19 +129,28 @@ export async function testLiveFlightSearch(userPrompt, page = 1) {
   }
 
   const formattedUserPrompt = userPrompt.trim();
-  const isGibberish =
-    formattedUserPrompt.length < 4 || !/[aeiou]/i.test(formattedUserPrompt);
-  if (isGibberish) {
-    appendChatMessage(
-      "I'm just a travel assistant. Could you tell me where you'd like to fly?",
-      "ai",
-      true,
-    );
-    return;
+
+  // Only validate and stream for fresh searches, not pagination
+  if (!silent) {
+    const isGibberish =
+      formattedUserPrompt.length < 4 || !/[aeiou]/i.test(formattedUserPrompt);
+    if (isGibberish) {
+      appendChatMessage(
+        "I'm just a travel assistant. Could you tell me where you'd like to fly?",
+        "ai",
+        true,
+      );
+      return;
+    }
   }
 
-  const stream = createStreamingAssistantMessage();
-  if (!stream) return;
+  // For pagination, show a subtle loading state instead of a new chat bubble
+  const stream = silent ? null : createStreamingAssistantMessage();
+  if (!silent && !stream) return;
+
+  if (silent && container) {
+    container.innerHTML = '<p class="text-center py-8 text-gray-400">Loading...</p>';
+  }
 
   try {
     const response = await fetch(`${API_BASE}/api/flights/search-stream`, {
@@ -171,8 +171,8 @@ export async function testLiveFlightSearch(userPrompt, page = 1) {
     let finalPagination = null;
 
     await consumeSseStream(response, {
-      status: ({ text }) => stream.appendStatus(text),
-      message: ({ text }) => stream.appendMessage(text),
+      status: ({ text }) => { if (!silent) stream.appendStatus(text); },
+      message: ({ text }) => { if (!silent) stream.appendMessage(text); },
       complete: ({ destination, offers, pagination }) => {
         finalDestination = destination;
         finalOffers = offers;
@@ -194,10 +194,10 @@ export async function testLiveFlightSearch(userPrompt, page = 1) {
       },
     });
 
-    await stream.finish(true);
+    if (!silent) await stream.finish(true);
 
     if (searchStarted && finalOffers?.length > 0) {
-      renderFlightsToScreen(finalOffers, false);
+      renderFlightsToScreen(finalOffers);
       if (finalPagination) renderPagination(finalPagination);
       updateMap(`${finalDestination} Airport`);
     } else if (searchStarted) {
@@ -205,8 +205,10 @@ export async function testLiveFlightSearch(userPrompt, page = 1) {
     }
   } catch (error) {
     console.error("🚨 Search Error:", error);
-    await stream.appendMessage("Something went wrong. Please try again.");
-    await stream.finish(true);
+    if (!silent) {
+      await stream.appendMessage("Something went wrong. Please try again.");
+      await stream.finish(true);
+    }
     if (container) {
       container.innerHTML = '<p class="text-center py-8 text-red-500">Error searching flights. Please try again.</p>';
     }

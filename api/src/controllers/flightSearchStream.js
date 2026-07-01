@@ -71,6 +71,8 @@ export const flightSearchStreamController = async (req, res) => {
 
   const userPrompt = req.body?.prompt;
   const contextDestination = req.body?.context?.destination ?? null;
+  const page = Math.max(parseInt(req.body?.page) || 1, 1);
+  const limit = 7;
 
   if (typeof userPrompt !== "string" || userPrompt.trim() === "") {
     sendSseEvent(res, "error", { message: "Missing prompt." });
@@ -189,6 +191,11 @@ export const flightSearchStreamController = async (req, res) => {
     const offers = flights?.data?.offers ?? [];
     const count = offers.length;
 
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginatedOffers = offers.slice(start, end);
+    const totalPages = Math.max(Math.ceil(offers.length / limit), 1);
+
     if (count > 0) {
       sendSseEvent(res, "status", {
         text: `Found ${count} possible flight${count === 1 ? "" : "s"}.`,
@@ -201,8 +208,16 @@ export const flightSearchStreamController = async (req, res) => {
 
     sendSseEvent(res, "complete", {
       destination,
-      offers,
+      offers: paginatedOffers,
       extracted,
+      pagination: {
+        page,
+        limit,
+        totalOffers: offers.length,
+        totalPages,
+        hasNextPage: end < offers.length,
+        hasPreviousPage: page > 1,
+      },
     });
     sendSseEvent(res, "done", { needsInput: false });
     endSse(res);

@@ -81,7 +81,7 @@ export const flightSearchStreamController = async (req, res) => {
   }
 
   try {
-    sendSseEvent(res, "status", { text: "Understanding your request..." });
+    sendSseEvent(res, "status", { text: " Understanding your request..." });
     await delay(300);
 
     const extractionPrompt = contextDestination
@@ -90,6 +90,11 @@ export const flightSearchStreamController = async (req, res) => {
 
     const result = await extractTripQuery(extractionPrompt);
     const extracted = { ...(result.parsed || {}) };
+
+    if (extracted.explanation) {
+      sendSseEvent(res, "message", { text: extracted.explanation });
+      await delay(300);
+    }
 
     if (!extracted.origin_airport) {
       extracted.origin_airport = await detectFallbackOrigin(req);

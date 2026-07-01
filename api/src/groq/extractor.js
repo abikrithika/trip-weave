@@ -5,6 +5,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 import { fileURLToPath } from "url";
 import { createGroq } from "@ai-sdk/groq";
 import SYSTEM_PROMPT from "./systemPrompt.js";
+import { resolveDestination } from "../utils/destinationResolver.js";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 
@@ -173,7 +174,7 @@ function normalizeFilters(value) {
 }
 
 function normalizeTripQuery(raw) {
-const source = raw && typeof raw === "object" ? raw : {};
+  const source = raw && typeof raw === "object" ? raw : {};
   const tomorrow = new Date();
 
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -181,9 +182,12 @@ const source = raw && typeof raw === "object" ? raw : {};
   const tomorrowDateStr = tomorrow.toISOString().split('T')[0];
 
   return {
-
-  origin_airport: normalizeIataCode(source.origin_airport) || null,
+    origin_airport: normalizeIataCode(source.origin_airport) || null,
     destination_airport: normalizeIataCode(source.destination_airport) || null,
+    destination_country: source.destination_country || null,
+    destination_country_code: normalizeIataCode(source.destination_country_code) || null,
+    destination_continent_code: normalizeIataCode(source.destination_continent_code) || null,
+    destination_area: source.destination_area || null,
 
     departure_date: source.departure_date || null,
     
@@ -340,11 +344,20 @@ parsed.direct_only = parsed.direct_only ?? null;
   parsed.baggage_required = parsed.baggage_required ?? null;
   parsed.departure_time = parsed.departure_time || null;
 
- const verificationErrors = verifyTripQuery(parsed);
+  const verificationErrors = verifyTripQuery(parsed);
   if (verificationErrors.length > 0) {
     result.errors.push(...verificationErrors);
     result.parsed = parsed;
     return result;
+  }
+
+  // Resolve country, area, and vibes to specific airport
+  const resolved = resolveDestination(parsed);
+  if (resolved && resolved.destination_airport) {
+    parsed.destination_airport = resolved.destination_airport;
+    parsed.explanation = resolved.explanation;
+  } else {
+    parsed.explanation = null;
   }
 
   result.ok = true;

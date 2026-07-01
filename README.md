@@ -1,9 +1,25 @@
-# trip-weave
+# Trip-Weave
+Trip-Weave is an AI-powered travel planning and flight search application that allows users to search for flights using natural language. Instead of manually entering airport codes, dates, and passenger information, users can simply describe their travel plans in plain English.
+
+The application uses an AI-powered extraction service (Groq) to convert user prompts into structured flight search parameters, which are then sent to the Duffel Flights API (or mock data during development). The project consists of a Node.js/Express backend, a lightweight frontend, PostgreSQL with Prisma ORM, and AI-assisted flight extraction.
+
+## Features
+- AI-powered flight search using natural language
+- Flight parameter extraction with Groq LLM
+- Flight search using the Duffel API
+- Mock flight data fallback for offline development
+- PostgreSQL database with Prisma ORM
+- RESTful API architecture
+- Frontend chat interface for flight search
+- Automated extractor normalization tests
+  
 ## Project Board
 
 - Trello: https://trello.com/b/2veKRbtH/trip-weave
-## Prerequisites
+- 
+# Running the Project Locally
 
+## Prerequisites
 Make sure you have the following installed:
 
 - Node.js
@@ -83,12 +99,71 @@ Nodemon automatically restarts the server whenever changes are made.
 
 npm start
 
-## API Base URL
+### Frontend
 
-When running locally:
+npm run start:frontend
+
+### Run both frontend and backend together:
+
+npm run standalone
+
+### Backend:
+
+http://localhost:5500
+
+### Frontend:
+
+http://localhost:8080
+
+# Deliverables
+## Deployed API
+## API Base URL(When running locally)
 
 http://localhost:5500 (Replace the port if configured differently in `.env`).
+## Postman Collection
 
+# Key Technical Summary & Design Decisions
+
+- Built with Node.js and Express.js following a RESTful API architecture.
+- Uses Prisma ORM for database management and migrations.
+- PostgreSQL is used as the primary relational database.
+- Flight search is powered by Duffel API, with automatic fallback to mock data for development and testing.
+- AI flight extraction uses Groq to convert natural-language travel requests into structured JSON.
+- Extracted flight requests are validated before search execution to reduce invalid API requests.
+- The backend is organised into modular services, routes, controllers, and database layers for maintainability.
+- Authentication and user accounts are implemented and managed using JWT.
+- Environment variables are used for all API keys and configuration.
+- Automated tests verify AI extraction and JSON normalization independently of external APIs.
+- Limited user conversations are stored for authenticated users.
+  
+# Tech Stack
+- Node.js
+- Express.js
+- PostgreSQL
+- Prisma ORM
+- Groq API
+- Duffel API
+- Nodemon
+- JavaScript
+
+# Future Improvements
+- Hotel and activity recommendations
+- Flight price alerts
+- Enhanced filtering and sorting
+- Better UI/UX and responsive design
+- Comprehensive API documentation using Swagger
+- Increased automated test coverage
+
+# Contributors
+
+| Name | GitHub Profile |
+|------|----------------|
+| **Abikrithika** | [@abikrithika](https://github.com/abikrithika) |
+| **Annamani** | [@annamani](https://github.com/annamani) |
+| **Priyo Arman** | [@priyoarman](https://github.com/priyoarman) |
+| **Ftshn84** | [@ftshn84](https://github.com/ftshn84) |
+
+# Sample Test flow
 ## Testing AI Flight JSON Extraction
 
 The flight AI extractor lives in `api/src/groq/`. It turns a natural-language flight request into clean JSON for the backend.
@@ -192,15 +267,6 @@ The API response wraps the extracted JSON in a `data` field:
 }
 ```
 
-## Tech Stack
-
-- Node.js
-- Express.js
-- PostgresSql
-- Nodemon
-
-## Contributors
-
 ## Testing the extractor and AI search
 
 Simple steps to test the extractor and the AI -> Duffel flow locally.
@@ -231,6 +297,7 @@ curl -s -X POST http://localhost:5050/api/flights/ai-search \
   - If you want the extractor to call the Groq model, set `GROQ_API_KEY` in your environment.
   - The Duffel service falls back to mock data by default. Provide `DUFFEL_TOKEN` and set `USE_MOCK = false` inside `api/src/services/duffel.js` to test live Duffel responses.
   - The extractor validates `return_date` and will return errors like `invalid_return_date` or `return_before_departure_date` when applicable.
+  
 ## Testing the Frontend (Live flight search)
 
 This project includes a small frontend in the `app/` folder that calls the backend Groq extractor and Duffel bridge to search flights.
